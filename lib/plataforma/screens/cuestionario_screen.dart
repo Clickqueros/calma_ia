@@ -45,15 +45,85 @@ class _CuestionarioScreenState extends State<CuestionarioScreen>
         _ctrl.forward();
       });
     } else {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondary) => const DashboardScreen(),
-          transitionsBuilder: (context, anim, secondary, child) =>
-              FadeTransition(opacity: anim, child: child),
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+      _mostrarPopupFinal();
     }
+  }
+
+  void _mostrarPopupFinal() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: PlatTheme.purpleGradient,
+                ),
+                child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                '¡Gracias por compartir!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: PlatTheme.textDark,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Hemos recibido tus respuestas. Un profesional de la salud evaluará tu estado emocional.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: PlatTheme.textGray,
+                  fontSize: 15,
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).pushReplacement(
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondary) =>
+                            const DashboardScreen(),
+                        transitionsBuilder: (context, anim, secondary, child) =>
+                            FadeTransition(opacity: anim, child: child),
+                        transitionDuration: const Duration(milliseconds: 500),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PlatTheme.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Continuar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _anterior() {
