@@ -133,7 +133,7 @@ class _LandingPageState extends State<LandingPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Apoyo diario para tu\nsalud mental',
+          'Apoyo diario para tu\nsalud mental ✨',
           style: TextStyle(
             color: Colors.white,
             fontSize: titleSize,
