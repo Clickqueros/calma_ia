@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/plat_theme.dart';
 import 'cuestionario_screen.dart';
+import 'dashboard_screen.dart';
 
 class BienvenidaScreen extends StatefulWidget {
   const BienvenidaScreen({super.key});
@@ -207,6 +208,16 @@ class _BienvenidaScreenState extends State<BienvenidaScreen>
         const Text(
           'Tus respuestas son privadas y confidenciales',
           style: TextStyle(color: Color(0xFF8090FF), fontSize: 13),
+        ),
+        const SizedBox(height: 20),
+        TextButton(
+          onPressed: () => Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          ),
+          child: const Text(
+            'Saltar evaluación',
+            style: TextStyle(color: Colors.white54, fontSize: 15),
+          ),
         ),
       ],
     );
