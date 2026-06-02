@@ -6,17 +6,17 @@ class RecursosScreen extends StatelessWidget {
   const RecursosScreen({super.key});
 
   static const _sesiones = [
-    _Sesion(1, 'SESION 1 -LIBRE DE ANSIEDAD TERAPIA GRUPAL.pdf', '4.1 MB',
+    _Sesion(1, 'sesion_1_libre_de_ansiedad.pdf', '4.1 MB',
         'Introducción al programa y fundamentos de la ansiedad.'),
-    _Sesion(2, 'SESION 2 -LIBRE DE ANSIEDAD TERAPIA GRUPAL (1).pdf', '5.5 MB',
+    _Sesion(2, 'sesion_2_libre_de_ansiedad.pdf', '5.5 MB',
         'Identificación de pensamientos automáticos negativos.'),
-    _Sesion(3, 'SESION 3 -LIBRE DE ANSIEDAD TERAPIA GRUPAL.pdf', '6.1 MB',
+    _Sesion(3, 'sesion_3_libre_de_ansiedad.pdf', '6.1 MB',
         'Técnicas de respiración y relajación progresiva.'),
-    _Sesion(4, 'SESION 4 -LIBRE DE ANSIEDAD TERAPIA GRUPAL.pdf', '4.1 MB',
+    _Sesion(4, 'sesion_4_libre_de_ansiedad.pdf', '4.1 MB',
         'Reestructuración cognitiva y manejo del estrés.'),
-    _Sesion(5, 'SESION 5 -LIBRE DE ANSIEDAD TERAPIA GRUPAL.pdf', '7.3 MB',
+    _Sesion(5, 'sesion_5_libre_de_ansiedad.pdf', '7.3 MB',
         'Exposición gradual y enfrentamiento de miedos.'),
-    _Sesion(6, 'SESION 6 -LIBRE DE ANSIEDAD TERAPIA GRUPAL.pdf', '6.4 MB',
+    _Sesion(6, 'sesion_6_libre_de_ansiedad.pdf', '6.4 MB',
         'Consolidación y plan de mantenimiento a largo plazo.'),
   ];
 
