@@ -633,7 +633,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => _irARespirar(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: PlatTheme.purple,
                 foregroundColor: Colors.white,
