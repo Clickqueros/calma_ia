@@ -2,12 +2,12 @@
 import 'dart:html' as html;
 
 void abrirPDF(String filename) {
-  final url = 'assets/recursos/${Uri.encodeComponent(filename)}';
+  final url = 'assets/assets/recursos/${Uri.encodeComponent(filename)}';
   html.window.open(url, '_blank');
 }
 
 void descargarPDF(String filename) {
-  final url = 'assets/recursos/${Uri.encodeComponent(filename)}';
+  final url = 'assets/assets/recursos/${Uri.encodeComponent(filename)}';
   final anchor = html.AnchorElement(href: url)
     ..setAttribute('download', filename)
     ..style.display = 'none';
