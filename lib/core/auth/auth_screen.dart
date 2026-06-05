@@ -5,7 +5,9 @@ import 'auth_service.dart';
 /// Pantalla de inicio de sesión y registro (paciente).
 /// Al autenticarse, el diario se sincroniza con Supabase automáticamente.
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  /// Rol con el que se registrará por defecto: 'patient' o 'psychologist'.
+  final String rolInicial;
+  const AuthScreen({super.key, this.rolInicial = 'patient'});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -13,6 +15,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _esRegistro = false;
+  late String _rol = widget.rolInicial;
   bool _cargando = false;
   String? _error;
   String? _mensaje;
@@ -58,6 +61,7 @@ class _AuthScreenState extends State<AuthScreen> {
         nombre: _nombre.text.trim(),
         email: _email.text.trim(),
         password: _password.text,
+        rol: _rol,
       );
     } else {
       err = await AuthService.instance.iniciarSesion(
@@ -143,6 +147,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                   color: PlatTheme.textGray, fontSize: 13.5)),
                           const SizedBox(height: 22),
                           if (_esRegistro) ...[
+                            _selectorRol(),
+                            const SizedBox(height: 16),
                             _campo(_nombre, 'Nombre', Icons.person_outline_rounded),
                             const SizedBox(height: 14),
                           ],
@@ -252,6 +258,47 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _selectorRol() {
+    Widget opcion(String valor, String label, IconData icon) {
+      final sel = _rol == valor;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => setState(() => _rol = valor),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: sel ? PlatTheme.purple.withValues(alpha: 0.1) : PlatTheme.softBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: sel ? PlatTheme.purple : const Color(0xFFE8E4FF),
+                  width: sel ? 1.5 : 1),
+            ),
+            child: Column(
+              children: [
+                Icon(icon,
+                    color: sel ? PlatTheme.purple : PlatTheme.textGray, size: 22),
+                const SizedBox(height: 5),
+                Text(label,
+                    style: TextStyle(
+                        color: sel ? PlatTheme.purple : PlatTheme.textGray,
+                        fontSize: 13,
+                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        opcion('patient', 'Soy paciente', Icons.self_improvement),
+        const SizedBox(width: 12),
+        opcion('psychologist', 'Soy psicólogo', Icons.medical_services_rounded),
+      ],
     );
   }
 

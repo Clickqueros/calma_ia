@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../plataforma/screens/bienvenida_screen.dart';
-import '../admin/admin_shell.dart';
+import '../admin/real/psicologo_portal.dart';
 import '../superadmin/superadmin_shell.dart';
 
 class LandingPage extends StatefulWidget {
@@ -70,7 +70,7 @@ class _LandingPageState extends State<LandingPage> {
           // Acceso al panel del psicólogo (demo, sin login)
           OutlinedButton.icon(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AdminShell()),
+              MaterialPageRoute(builder: (_) => const PsicologoPortal()),
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: _purple,

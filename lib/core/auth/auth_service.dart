@@ -28,13 +28,14 @@ class AuthService extends ChangeNotifier {
     required String nombre,
     required String email,
     required String password,
+    String rol = 'patient', // patient | psychologist
   }) async {
     if (_client == null) return 'Backend no configurado.';
     try {
       await _client!.auth.signUp(
         email: email,
         password: password,
-        data: {'nombre': nombre},
+        data: {'nombre': nombre, 'rol': rol},
       );
       return null; // éxito
     } on AuthException catch (e) {

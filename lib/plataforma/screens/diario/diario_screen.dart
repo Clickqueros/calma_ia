@@ -5,6 +5,7 @@ import 'widgets/estado_selector.dart';
 import 'widgets/nota_card.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/auth/auth_screen.dart';
+import '../../../core/auth/perfil_service.dart';
 import '../../../core/supabase/supabase_config.dart';
 
 class DiarioScreen extends StatefulWidget {
@@ -52,6 +53,67 @@ class _DiarioScreenState extends State<DiarioScreen> {
     super.dispose();
   }
 
+  // ── Conectar con psicólogo ──────────────────────────────────────────────────
+
+  Future<void> _conectarPsicologo() async {
+    final ctrl = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Conectar con mi psicólogo',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+                'Ingresa el correo que te dio tu psicólogo. Solo verá tu diario emocional.',
+                style: TextStyle(color: _textGray, fontSize: 13, height: 1.4)),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                hintText: 'correo@psicologo.com',
+                filled: true,
+                fillColor: _softBg,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE8E4FF))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE8E4FF))),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar',
+                  style: TextStyle(color: _textGray))),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: _purple, foregroundColor: Colors.white),
+            child: const Text('Conectar'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || result.isEmpty) return;
+    final error = await PerfilService.instance.vincularConPsicologo(result);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(error ?? '¡Conectado! Tu psicólogo ya puede ver tu diario.'),
+      backgroundColor: error == null ? const Color(0xFF059669) : const Color(0xFFDC2626),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 3),
+    ));
+  }
+
   // ── Banner de sesión ────────────────────────────────────────────────────────
 
   Widget _buildSesionBanner() {
@@ -89,15 +151,29 @@ class _DiarioScreenState extends State<DiarioScreen> {
                 ],
               ),
             ),
-            GestureDetector(
-              onTap: () async {
-                await AuthService.instance.cerrarSesion();
-              },
-              child: const Text('Cerrar sesión',
-                  style: TextStyle(
-                      color: Color(0xFF059669),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: _conectarPsicologo,
+                  child: const Text('Conectar psicólogo',
+                      style: TextStyle(
+                          color: _purple,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () async {
+                    await AuthService.instance.cerrarSesion();
+                  },
+                  child: const Text('Cerrar sesión',
+                      style: TextStyle(
+                          color: Color(0xFF059669),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ],
             ),
           ],
         ),
