@@ -7,7 +7,20 @@ import 'auth_service.dart';
 class AuthScreen extends StatefulWidget {
   /// Rol con el que se registrará por defecto: 'patient' o 'psychologist'.
   final String rolInicial;
-  const AuthScreen({super.key, this.rolInicial = 'patient'});
+
+  /// Si false, oculta el botón "Continuar sin cuenta" (login obligatorio).
+  final bool permitirInvitado;
+
+  /// Si se provee, se llama al autenticarse en vez de hacer Navigator.pop.
+  /// Útil cuando la pantalla es la puerta de entrada (gate), no un push.
+  final VoidCallback? onAutenticado;
+
+  const AuthScreen({
+    super.key,
+    this.rolInicial = 'patient',
+    this.permitirInvitado = true,
+    this.onAutenticado,
+  });
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -85,8 +98,12 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
 
-    // Sesión iniciada → volver.
-    Navigator.of(context).pop(true);
+    // Sesión iniciada.
+    if (widget.onAutenticado != null) {
+      widget.onAutenticado!();
+    } else {
+      Navigator.of(context).pop(true);
+    }
   }
 
   @override
@@ -244,13 +261,15 @@ class _AuthScreenState extends State<AuthScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Continuar sin cuenta',
-                          style: TextStyle(
-                              color: PlatTheme.softBlue, fontSize: 13)),
-                    ),
+                    if (widget.permitirInvitado) ...[
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Continuar sin cuenta',
+                            style: TextStyle(
+                                color: PlatTheme.softBlue, fontSize: 13)),
+                      ),
+                    ],
                   ],
                 ),
               ),

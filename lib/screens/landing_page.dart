@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../plataforma/screens/bienvenida_screen.dart';
+import '../core/auth/paciente_gate.dart';
 import '../admin/real/psicologo_portal.dart';
 import '../superadmin/superadmin_shell.dart';
 
@@ -88,7 +88,7 @@ class _LandingPageState extends State<LandingPage> {
           const SizedBox(width: 12),
           ElevatedButton(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+              MaterialPageRoute(builder: (_) => const PacienteGate()),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _purple,
@@ -174,7 +174,7 @@ class _LandingPageState extends State<LandingPage> {
           children: [
             ElevatedButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+                MaterialPageRoute(builder: (_) => const PacienteGate()),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _purple,
@@ -975,7 +975,7 @@ class _LandingPageState extends State<LandingPage> {
           const SizedBox(height: 40),
           ElevatedButton(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+              MaterialPageRoute(builder: (_) => const PacienteGate()),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _purple,
