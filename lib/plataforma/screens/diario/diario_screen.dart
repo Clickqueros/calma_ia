@@ -7,6 +7,7 @@ import '../../../core/auth/auth_service.dart';
 import '../../../core/auth/auth_screen.dart';
 import '../../../core/auth/perfil_service.dart';
 import '../../../core/supabase/supabase_config.dart';
+import '../citas/agendar_cita_real_screen.dart';
 
 class DiarioScreen extends StatefulWidget {
   const DiarioScreen({super.key});
@@ -114,6 +115,38 @@ class _DiarioScreenState extends State<DiarioScreen> {
     ));
   }
 
+  Future<void> _agendarCita() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AgendarCitaRealScreen()),
+    );
+  }
+
+  Widget _chipAccion(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFA7E8C8)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 15, color: const Color(0xFF059669)),
+            const SizedBox(width: 6),
+            Text(label,
+                style: const TextStyle(
+                    color: Color(0xFF065F46),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Banner de sesión ────────────────────────────────────────────────────────
 
   Widget _buildSesionBanner() {
@@ -131,38 +164,29 @@ class _DiarioScreenState extends State<DiarioScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFA7E8C8)),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.cloud_done_rounded,
-                color: Color(0xFF059669), size: 19),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Tu diario se guarda en la nube',
-                      style: TextStyle(
-                          color: Color(0xFF065F46),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600)),
-                  Text(email,
-                      style: const TextStyle(
-                          color: Color(0xFF059669), fontSize: 11.5)),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
               children: [
-                GestureDetector(
-                  onTap: _conectarPsicologo,
-                  child: const Text('Conectar psicólogo',
-                      style: TextStyle(
-                          color: _purple,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700)),
+                const Icon(Icons.cloud_done_rounded,
+                    color: Color(0xFF059669), size: 19),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Tu diario se guarda en la nube',
+                          style: TextStyle(
+                              color: Color(0xFF065F46),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
+                      Text(email,
+                          style: const TextStyle(
+                              color: Color(0xFF059669), fontSize: 11.5)),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 6),
                 GestureDetector(
                   onTap: () async {
                     await AuthService.instance.cerrarSesion();
@@ -172,6 +196,20 @@ class _DiarioScreenState extends State<DiarioScreen> {
                           color: Color(0xFF059669),
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _chipAccion(
+                      Icons.link_rounded, 'Conectar psicólogo', _conectarPsicologo),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _chipAccion(
+                      Icons.event_available_rounded, 'Agendar cita', _agendarCita),
                 ),
               ],
             ),

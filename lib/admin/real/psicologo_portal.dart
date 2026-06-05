@@ -6,6 +6,7 @@ import '../../core/auth/auth_screen.dart';
 import '../../core/auth/perfil_service.dart';
 import '../../plataforma/screens/diario/models/nota_model.dart';
 import '../admin_shell.dart';
+import 'psicologo_citas_screen.dart';
 
 /// Entrada al portal del psicólogo.
 /// - Sin backend → panel demo.
@@ -251,6 +252,12 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
                 fontSize: 17,
                 fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            tooltip: 'Mis citas',
+            icon: const Icon(Icons.event_note_rounded, color: Colors.white),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const PsicologoCitasScreen())),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             onPressed: _cargar,
