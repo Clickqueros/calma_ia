@@ -16,20 +16,36 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _cargando = false;
   String? _error;
   String? _mensaje;
+  bool _verPassword = false;
+  bool _verConfirmar = false;
 
   final _nombre = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmar = TextEditingController();
 
   @override
   void dispose() {
     _nombre.dispose();
     _email.dispose();
     _password.dispose();
+    _confirmar.dispose();
     super.dispose();
   }
 
   Future<void> _enviar() async {
+    // Validaciones del registro
+    if (_esRegistro) {
+      if (_password.text.length < 6) {
+        setState(() => _error = 'La contraseña debe tener al menos 6 caracteres.');
+        return;
+      }
+      if (_password.text != _confirmar.text) {
+        setState(() => _error = 'Las contraseñas no coinciden.');
+        return;
+      }
+    }
+
     setState(() {
       _cargando = true;
       _error = null;
@@ -135,7 +151,21 @@ class _AuthScreenState extends State<AuthScreen> {
                               tipo: TextInputType.emailAddress),
                           const SizedBox(height: 14),
                           _campo(_password, 'Contraseña', Icons.lock_outline_rounded,
-                              oculto: true),
+                              oculto: !_verPassword,
+                              conOjo: true,
+                              ojoVisible: _verPassword,
+                              onToggleOjo: () =>
+                                  setState(() => _verPassword = !_verPassword)),
+                          if (_esRegistro) ...[
+                            const SizedBox(height: 14),
+                            _campo(_confirmar, 'Confirmar contraseña',
+                                Icons.lock_outline_rounded,
+                                oculto: !_verConfirmar,
+                                conOjo: true,
+                                ojoVisible: _verConfirmar,
+                                onToggleOjo: () => setState(
+                                    () => _verConfirmar = !_verConfirmar)),
+                          ],
                           if (_error != null) ...[
                             const SizedBox(height: 14),
                             _aviso(_error!, const Color(0xFFDC2626),
@@ -226,7 +256,11 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _campo(TextEditingController c, String hint, IconData icon,
-      {bool oculto = false, TextInputType? tipo}) {
+      {bool oculto = false,
+      TextInputType? tipo,
+      bool conOjo = false,
+      bool ojoVisible = false,
+      VoidCallback? onToggleOjo}) {
     return TextField(
       controller: c,
       obscureText: oculto,
@@ -235,6 +269,17 @@ class _AuthScreenState extends State<AuthScreen> {
         hintText: hint,
         hintStyle: const TextStyle(color: PlatTheme.textGray, fontSize: 14),
         prefixIcon: Icon(icon, color: PlatTheme.textGray, size: 20),
+        suffixIcon: conOjo
+            ? IconButton(
+                icon: Icon(
+                    ojoVisible
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                    color: PlatTheme.textGray,
+                    size: 20),
+                onPressed: onToggleOjo,
+              )
+            : null,
         filled: true,
         fillColor: PlatTheme.softBg,
         border: OutlineInputBorder(
