@@ -13,8 +13,8 @@
 class SupabaseConfig {
   SupabaseConfig._();
 
-  static const String supabaseUrl = ''; // ej: https://xxxxx.supabase.co
-  static const String supabaseAnonKey = ''; // ej: eyJhbGciOi...
+  static const String supabaseUrl = 'https://gtmqbduswftrpflqhpbm.supabase.co';
+  static const String supabaseAnonKey = 'sb_publishable_d0qI6nzXkgAOUTengyV6YA_5VXvfQsx';
 
   /// true cuando las credenciales están puestas → backend activo.
   static bool get isConfigured =>

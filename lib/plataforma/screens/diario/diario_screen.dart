@@ -3,6 +3,9 @@ import 'models/nota_model.dart';
 import 'services/diario_service.dart';
 import 'widgets/estado_selector.dart';
 import 'widgets/nota_card.dart';
+import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_screen.dart';
+import '../../../core/supabase/supabase_config.dart';
 
 class DiarioScreen extends StatefulWidget {
   const DiarioScreen({super.key});
@@ -32,9 +35,12 @@ class _DiarioScreenState extends State<DiarioScreen> {
   void initState() {
     super.initState();
     DiarioService.instance.addListener(_onServiceChange);
+    AuthService.instance.addListener(_onServiceChange);
   }
 
-  void _onServiceChange() => setState(() {});
+  void _onServiceChange() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -42,7 +48,100 @@ class _DiarioScreenState extends State<DiarioScreen> {
     _contenidoCtrl.dispose();
     _scrollCtrl.dispose();
     DiarioService.instance.removeListener(_onServiceChange);
+    AuthService.instance.removeListener(_onServiceChange);
     super.dispose();
+  }
+
+  // ── Banner de sesión ────────────────────────────────────────────────────────
+
+  Widget _buildSesionBanner() {
+    // Si no hay backend configurado, no mostramos nada (modo demo puro).
+    if (!SupabaseConfig.isConfigured) return const SizedBox.shrink();
+
+    final haySesion = AuthService.instance.haySesion;
+    final email = AuthService.instance.usuarioActual?.email ?? '';
+
+    if (haySesion) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8FAF0),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFA7E8C8)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_done_rounded,
+                color: Color(0xFF059669), size: 19),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Tu diario se guarda en la nube',
+                      style: TextStyle(
+                          color: Color(0xFF065F46),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                  Text(email,
+                      style: const TextStyle(
+                          color: Color(0xFF059669), fontSize: 11.5)),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () async {
+                await AuthService.instance.cerrarSesion();
+              },
+              child: const Text('Cerrar sesión',
+                  style: TextStyle(
+                      color: Color(0xFF059669),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _purple.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _purple.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_upload_rounded, color: _purple, size: 19),
+            const SizedBox(width: 11),
+            const Expanded(
+              child: Text(
+                  'Inicia sesión para guardar tu diario de forma permanente y privada',
+                  style: TextStyle(
+                      color: _textDark, fontSize: 12.5, height: 1.4)),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: _purple,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('Entrar',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -61,7 +160,9 @@ class _DiarioScreenState extends State<DiarioScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
+            _buildSesionBanner(),
+            const SizedBox(height: 8),
             _buildEditor(),
             const SizedBox(height: 40),
             _buildListaNotas(),
