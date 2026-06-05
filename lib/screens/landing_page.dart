@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../plataforma/screens/bienvenida_screen.dart';
 import '../admin/admin_shell.dart';
+import '../superadmin/superadmin_shell.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -1013,7 +1014,14 @@ class _LandingPageState extends State<LandingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _logo(),
+                    // Acceso discreto al panel SuperAdmin: mantener presionado el logo.
+                    GestureDetector(
+                      onLongPress: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const SuperAdminShell()),
+                      ),
+                      child: _logo(),
+                    ),
                     const SizedBox(height: 16),
                     const Text(
                       'Tu compañero de bienestar mental impulsado por inteligencia artificial.',
