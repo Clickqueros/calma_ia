@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../plataforma/screens/bienvenida_screen.dart';
+import '../admin/admin_shell.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -65,6 +66,25 @@ class _LandingPageState extends State<LandingPage> {
             _navLink('Testimonios'),
             const SizedBox(width: 40),
           ],
+          // Acceso al panel del psicólogo (demo, sin login)
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AdminShell()),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _purple,
+              side: const BorderSide(color: _purple),
+              padding: EdgeInsets.symmetric(
+                  horizontal: _small ? 12 : 18, vertical: _small ? 10 : 14),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.medical_services_outlined, size: 16),
+            label: Text(_small ? 'Psicólogos' : 'Portal Psicólogos',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 14)),
+          ),
+          const SizedBox(width: 12),
           ElevatedButton(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
