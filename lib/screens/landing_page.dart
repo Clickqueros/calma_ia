@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/auth/paciente_gate.dart';
 import '../admin/real/psicologo_portal.dart';
-import '../superadmin/superadmin_shell.dart';
+import '../superadmin/superadmin_gate.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -1018,7 +1018,7 @@ class _LandingPageState extends State<LandingPage> {
                     GestureDetector(
                       onLongPress: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                            builder: (_) => const SuperAdminShell()),
+                            builder: (_) => const SuperAdminGate()),
                       ),
                       child: _logo(),
                     ),

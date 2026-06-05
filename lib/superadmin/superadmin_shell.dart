@@ -7,6 +7,8 @@ import 'audit/audit_screen.dart';
 import 'access_requests/access_requests_screen.dart';
 import 'asignaciones/asignaciones_screen.dart';
 import 'widgets/status_badge.dart';
+import '../core/auth/auth_service.dart';
+import '../core/supabase/supabase_config.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SuperAdminShell — panel del dueño de la plataforma.
@@ -220,18 +222,26 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
             ),
           ),
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () async {
+              final nav = Navigator.of(context);
+              if (SupabaseConfig.isConfigured &&
+                  AuthService.instance.haySesion) {
+                await AuthService.instance.cerrarSesion();
+              }
+              nav.maybePop();
+            },
             child: Container(
               padding: const EdgeInsets.fromLTRB(28, 14, 24, 20),
               child: Row(
                 children: [
                   const Icon(Icons.logout_rounded,
-                      color: Color.fromRGBO(176, 191, 255, 0.55), size: 20),
+                      color: Color(0xFFFF8A8A), size: 20),
                   const SizedBox(width: 12),
-                  const Text('Salir del panel',
+                  const Text('Cerrar sesión',
                       style: TextStyle(
-                          color: Color.fromRGBO(176, 191, 255, 0.65),
-                          fontSize: 14)),
+                          color: Color(0xFFFF8A8A),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
