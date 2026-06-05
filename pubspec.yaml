@@ -37,6 +37,7 @@ dependencies:
 
   # Para abrir PDFs en una nueva pestaña de forma confiable en web.
   url_launcher: ^6.3.0
+  supabase_flutter: ^2.14.1
 
 dev_dependencies:
   flutter_test:

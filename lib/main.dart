@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/supabase/supabase_config.dart';
 import 'screens/landing_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa Supabase SOLO si hay credenciales.
+  // Sin credenciales → la app sigue en modo demo, sin romperse.
+  if (SupabaseConfig.isConfigured) {
+    await Supabase.initialize(
+      url: SupabaseConfig.supabaseUrl,
+      anonKey: SupabaseConfig.supabaseAnonKey,
+    );
+  }
+
   runApp(const CalmaApp());
 }
 
