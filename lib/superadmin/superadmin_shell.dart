@@ -5,6 +5,7 @@ import 'psychologists/psychologists_screen.dart';
 import 'patients/patients_admin_screen.dart';
 import 'audit/audit_screen.dart';
 import 'access_requests/access_requests_screen.dart';
+import 'asignaciones/asignaciones_screen.dart';
 import 'widgets/status_badge.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
     _Item(0, Icons.grid_view_rounded, 'Dashboard'),
     _Item(1, Icons.medical_services_rounded, 'Psicólogos'),
     _Item(2, Icons.people_alt_rounded, 'Pacientes'),
+    _Item(13, Icons.link_rounded, 'Asignaciones'),
     _Item(3, Icons.apartment_rounded, 'Clínicas'),
     _Item(4, Icons.event_note_rounded, 'Citas'),
   ];
@@ -62,6 +64,7 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
         0 => const SuperAdminDashboardScreen(),
         1 => const PsychologistsScreen(),
         2 => const PatientsAdminScreen(),
+        13 => const AsignacionesScreen(),
         9 => const AuditScreen(),
         11 => const AccessRequestsScreen(),
         _ => _enConstruccion(),
