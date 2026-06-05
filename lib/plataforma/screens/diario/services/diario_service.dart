@@ -62,7 +62,8 @@ class DiarioService extends ChangeNotifier {
                 (e) => e.name == r['estado'],
                 orElse: () => EstadoEmocional.tranquilo,
               ),
-              fecha: DateTime.tryParse(r['fecha'] ?? '') ?? DateTime.now(),
+              fecha: (DateTime.tryParse(r['fecha'] ?? '') ?? DateTime.now())
+                  .toLocal(),
             )));
     } catch (_) {
       // Si falla la red, no rompemos la UI.
@@ -95,7 +96,7 @@ class DiarioService extends ChangeNotifier {
           'titulo': nota.titulo,
           'contenido': nota.contenido,
           'estado': nota.estado.name,
-          'fecha': nota.fecha.toIso8601String(),
+          'fecha': nota.fecha.toUtc().toIso8601String(),
         });
         await _cargarDesdeSupabase(); // refresca con el id real
         notifyListeners();
