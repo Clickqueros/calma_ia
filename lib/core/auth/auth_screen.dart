@@ -8,6 +8,10 @@ class AuthScreen extends StatefulWidget {
   /// Si false, oculta el botón "Continuar sin cuenta" (login obligatorio).
   final bool permitirInvitado;
 
+  /// Si true, solo permite iniciar sesión (oculta el registro).
+  /// Usado por el portal del psicólogo y el panel admin.
+  final bool soloLogin;
+
   /// Si se provee, se llama al autenticarse en vez de hacer Navigator.pop.
   /// Útil cuando la pantalla es la puerta de entrada (gate), no un push.
   final VoidCallback? onAutenticado;
@@ -15,6 +19,7 @@ class AuthScreen extends StatefulWidget {
   const AuthScreen({
     super.key,
     this.permitirInvitado = true,
+    this.soloLogin = false,
     this.onAutenticado,
   });
 
@@ -222,6 +227,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                           fontWeight: FontWeight.w600)),
                             ),
                           ),
+                          if (!widget.soloLogin) ...[
                           const SizedBox(height: 14),
                           Center(
                             child: GestureDetector(
@@ -251,6 +257,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               ),
                             ),
                           ),
+                          ],
                         ],
                       ),
                     ),

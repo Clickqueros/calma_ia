@@ -111,7 +111,7 @@ class _LoginPsicologo extends StatelessWidget {
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               const Text(
-                  'Inicia sesión o crea tu cuenta profesional para ver a tus pacientes.',
+                  'Inicia sesión con la cuenta que te entregó tu administrador.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: PlatTheme.textGray, fontSize: 14)),
               const SizedBox(height: 22),
@@ -120,8 +120,8 @@ class _LoginPsicologo extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () async {
                     await Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) =>
-                            const AuthScreen(permitirInvitado: false)));
+                        builder: (_) => const AuthScreen(
+                            permitirInvitado: false, soloLogin: true)));
                     onListo();
                   },
                   style: ElevatedButton.styleFrom(
@@ -132,7 +132,7 @@ class _LoginPsicologo extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text('Iniciar sesión / Registrarme',
+                  child: const Text('Iniciar sesión',
                       style:
                           TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),

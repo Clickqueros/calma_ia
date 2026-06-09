@@ -110,7 +110,8 @@ class _AsignacionesScreenState extends State<AsignacionesScreen> {
                 }
                 if (!mounted) return;
                 await Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const AuthScreen()));
+                    builder: (_) => const AuthScreen(
+                        permitirInvitado: false, soloLogin: true)));
                 _init();
               },
               style: ElevatedButton.styleFrom(

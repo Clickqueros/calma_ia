@@ -116,8 +116,8 @@ class _PromptLogin extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () async {
                       await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) =>
-                              const AuthScreen(permitirInvitado: false)));
+                          builder: (_) => const AuthScreen(
+                              permitirInvitado: false, soloLogin: true)));
                       onListo();
                     },
                     style: ElevatedButton.styleFrom(
