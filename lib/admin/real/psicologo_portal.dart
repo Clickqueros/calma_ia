@@ -121,7 +121,7 @@ class _LoginPsicologo extends StatelessWidget {
                   onPressed: () async {
                     await Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) =>
-                            const AuthScreen(rolInicial: 'psychologist')));
+                            const AuthScreen(permitirInvitado: false)));
                     onListo();
                   },
                   style: ElevatedButton.styleFrom(

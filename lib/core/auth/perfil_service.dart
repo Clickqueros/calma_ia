@@ -63,6 +63,23 @@ class PerfilService {
     return p?['psicologo_id'] != null;
   }
 
+  /// Datos básicos del psicólogo asignado al paciente actual (o null).
+  Future<Map<String, dynamic>?> miPsicologo() async {
+    if (_sb == null) return null;
+    final p = await miPerfil();
+    final pid = p?['psicologo_id'];
+    if (pid == null) return null;
+    try {
+      return await _sb!
+          .from('profiles')
+          .select('nombre, email')
+          .eq('id', pid)
+          .maybeSingle();
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Para el psicólogo: sus pacientes ────────────────────────────────────────
   Future<List<PacienteVinculado>> misPacientes() async {
     if (_sb == null || _uid == null) return [];

@@ -162,6 +162,30 @@ class _AsignacionesScreenState extends State<AsignacionesScreen> {
             ),
           ),
           const SizedBox(height: 18),
+          GestureDetector(
+            onTap: _registrarPsicologo,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                color: PlatTheme.purple,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.person_add_alt_1_rounded,
+                      color: Colors.white, size: 19),
+                  SizedBox(width: 8),
+                  Text('Registrar nuevo psicólogo',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           Row(
             children: [
               Text('${_pacientes.length} pacientes',
@@ -260,6 +284,111 @@ class _AsignacionesScreenState extends State<AsignacionesScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _registrarPsicologo() async {
+    final nombre = TextEditingController();
+    final email = TextEditingController();
+    final pass = TextEditingController();
+    bool guardando = false;
+    String? error;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Registrar psicólogo',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                    'Crea la cuenta del profesional. Él solo iniciará sesión; no se registra por su cuenta.',
+                    style: TextStyle(color: PlatTheme.textGray, fontSize: 12.5)),
+              ),
+              const SizedBox(height: 14),
+              _campoDialog(nombre, 'Nombre completo'),
+              const SizedBox(height: 10),
+              _campoDialog(email, 'Correo', tipo: TextInputType.emailAddress),
+              const SizedBox(height: 10),
+              _campoDialog(pass, 'Contraseña temporal', oculto: true),
+              if (error != null) ...[
+                const SizedBox(height: 10),
+                Text(error!,
+                    style: const TextStyle(
+                        color: Color(0xFFDC2626), fontSize: 12.5)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: guardando ? null : () => Navigator.of(ctx).pop(),
+                child: const Text('Cancelar',
+                    style: TextStyle(color: PlatTheme.textGray))),
+            ElevatedButton(
+              onPressed: guardando
+                  ? null
+                  : () async {
+                      setLocal(() { guardando = true; error = null; });
+                      final err =
+                          await PerfilAdminService.instance.registrarPsicologo(
+                        nombre: nombre.text,
+                        email: email.text,
+                        password: pass.text,
+                      );
+                      if (err == null) {
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        await _init();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Psicólogo creado ✓'),
+                              backgroundColor: Color(0xFF059669),
+                              behavior: SnackBarBehavior.floating));
+                        }
+                      } else {
+                        setLocal(() { guardando = false; error = err; });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: PlatTheme.purple,
+                  foregroundColor: Colors.white),
+              child: guardando
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.5))
+                  : const Text('Crear'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _campoDialog(TextEditingController c, String hint,
+      {bool oculto = false, TextInputType? tipo}) {
+    return TextField(
+      controller: c,
+      obscureText: oculto,
+      keyboardType: tipo,
+      decoration: InputDecoration(
+        hintText: hint,
+        isDense: true,
+        filled: true,
+        fillColor: PlatTheme.softBg,
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE8E4FF))),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE8E4FF))),
       ),
     );
   }

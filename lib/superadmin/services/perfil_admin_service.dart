@@ -55,6 +55,45 @@ class PerfilAdminService {
   Future<List<PerfilAdmin>> psicologos() async =>
       (await listarTodos()).where((p) => p.rol == 'psychologist').toList();
 
+  /// Crea una cuenta de psicólogo (solo el admin puede hacerlo).
+  /// Usa un cliente Supabase temporal para NO cerrar la sesión del admin.
+  Future<String?> registrarPsicologo({
+    required String nombre,
+    required String email,
+    required String password,
+  }) async {
+    if (!SupabaseConfig.isConfigured) return 'Backend no configurado.';
+    if (password.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres.';
+    }
+    SupabaseClient? temp;
+    try {
+      temp = SupabaseClient(
+        SupabaseConfig.supabaseUrl,
+        SupabaseConfig.supabaseAnonKey,
+      );
+      final res = await temp.auth.signUp(
+        email: email.trim(),
+        password: password,
+        data: {'nombre': nombre.trim(), 'rol': 'psychologist'},
+      );
+      if (res.user == null) {
+        return 'No se pudo crear. ¿La confirmación de correo está activa? '
+            'Desactívala en Supabase para crear cuentas al instante.';
+      }
+      return null; // éxito
+    } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('already registered') ||
+          msg.contains('User already')) {
+        return 'Ya existe una cuenta con ese correo.';
+      }
+      return 'Error al crear psicólogo: $e';
+    } finally {
+      await temp?.dispose();
+    }
+  }
+
   /// Asigna (o reasigna) un paciente a un psicólogo.
   Future<String?> asignar(String pacienteId, String? psicologoId) async {
     if (_sb == null) return 'Backend no configurado.';

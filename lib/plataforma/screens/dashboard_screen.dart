@@ -5,6 +5,8 @@ import 'respiracion/respiracion_screen.dart';
 import 'ejercicios/ejercicios_screen.dart';
 import 'diario/diario_screen.dart';
 import 'citas/citas_screen.dart';
+import 'citas/mis_citas_paciente_screen.dart';
+import '../../core/supabase/supabase_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -330,7 +332,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildMainContent() {
     return switch (_selectedNav) {
       1 => const EjerciciosScreen(),
-      2 => const CitasScreen(),
+      2 => SupabaseConfig.isConfigured
+          ? const MisCitasPacienteScreen()
+          : const CitasScreen(),
       3 => const RecursosScreen(),
       4 => const DiarioScreen(),
       _ => _buildInicio(),
