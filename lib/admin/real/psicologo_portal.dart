@@ -221,7 +221,8 @@ class PsicologoRealScreen extends StatefulWidget {
 class _ResumenPaciente {
   final PacienteVinculado p;
   final NotaDiario? ultima;
-  const _ResumenPaciente(this.p, this.ultima);
+  final ReporteSemanal reporte;
+  const _ResumenPaciente(this.p, this.ultima, this.reporte);
 }
 
 class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
@@ -240,8 +241,10 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
     final pacientes = await PerfilService.instance.misPacientes();
     final resumenes = <_ResumenPaciente>[];
     for (final p in pacientes) {
-      final ultima = await PerfilService.instance.ultimaNotaDe(p.id);
-      resumenes.add(_ResumenPaciente(p, ultima));
+      final notas = await PerfilService.instance.notasDePaciente(p.id);
+      final reporte = calcularReporteSemanal(notas);
+      resumenes.add(
+          _ResumenPaciente(p, notas.isEmpty ? null : notas.first, reporte));
     }
     final citas = await CitasService.instance.misCitasPsicologo();
     if (mounted) {
@@ -660,36 +663,48 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
                           color: PlatTheme.textDark,
                           fontSize: 15,
                           fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  if (r.ultima != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: r.ultima!.estado.bgSuave,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                  const SizedBox(height: 5),
+                  if (r.reporte.promedio != null)
+                    Row(
+                      children: [
+                        if (r.ultima != null) ...[
                           Text(r.ultima!.estado.emoji,
-                              style: const TextStyle(fontSize: 11)),
-                          const SizedBox(width: 5),
-                          Text('Último: ${r.ultima!.estado.label}',
-                              style: TextStyle(
-                                  color: r.ultima!.estado.color,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600)),
+                              style: const TextStyle(fontSize: 13)),
+                          const SizedBox(width: 6),
                         ],
-                      ),
+                        Text('Semana: ',
+                            style: const TextStyle(
+                                color: PlatTheme.textGray, fontSize: 12)),
+                        Text(r.reporte.etiqueta,
+                            style: TextStyle(
+                                color: r.reporte.color,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      ],
                     )
                   else
-                    const Text('Sin notas aún',
+                    const Text('Sin registros esta semana',
                         style: TextStyle(
                             color: PlatTheme.textGray, fontSize: 12)),
                 ],
               ),
             ),
+            // Puntaje semanal
+            if (r.reporte.promedio != null) ...[
+              Column(
+                children: [
+                  Text('${r.reporte.promedio}',
+                      style: TextStyle(
+                          color: r.reporte.color,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
+                  const Text('/100',
+                      style: TextStyle(
+                          color: PlatTheme.textGray, fontSize: 10)),
+                ],
+              ),
+              const SizedBox(width: 8),
+            ],
             const Icon(Icons.chevron_right_rounded, color: PlatTheme.textGray),
           ],
         ),
@@ -766,7 +781,15 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                _reporteSemanalCard(calcularReporteSemanal(_notas)),
                 const SizedBox(height: 18),
+                const Text('Notas del diario',
+                    style: TextStyle(
+                        color: PlatTheme.textDark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
                 if (_notas.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 50),
@@ -780,6 +803,104 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                   ..._notas.map(_notaCard),
               ],
             ),
+    );
+  }
+
+  // ── Reporte semanal ──────────────────────────────────────────────────────────
+  Widget _reporteSemanalCard(ReporteSemanal r) {
+    const nombresDia = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEFECFF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Reporte semanal',
+                  style: TextStyle(
+                      color: PlatTheme.textDark,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              if (r.promedio != null) ...[
+                Text('${r.promedio}',
+                    style: TextStyle(
+                        color: r.color,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold)),
+                const Text(' /100',
+                    style:
+                        TextStyle(color: PlatTheme.textGray, fontSize: 12)),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: r.color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 7),
+              Text(r.etiqueta,
+                  style: TextStyle(
+                      color: r.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Text('${r.registros} registros',
+                  style: const TextStyle(
+                      color: PlatTheme.textGray, fontSize: 11.5)),
+            ],
+          ),
+          const SizedBox(height: 18),
+          // Barras de los 7 días
+          SizedBox(
+            height: 120,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: r.dias.asMap().entries.map((e) {
+                final dia = e.value;
+                final tieneData = dia.puntaje != null;
+                final altura = tieneData ? (dia.puntaje! / 100 * 86) : 4.0;
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (tieneData)
+                      Text(dia.estado!.emoji,
+                          style: const TextStyle(fontSize: 13))
+                    else
+                      const SizedBox(height: 16),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 26,
+                      height: altura,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        color: tieneData
+                            ? dia.estado!.color
+                            : const Color(0xFFE8E4FF),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(nombresDia[dia.fecha.weekday - 1],
+                        style: const TextStyle(
+                            color: PlatTheme.textGray, fontSize: 11)),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
