@@ -85,6 +85,12 @@ class PerfilService {
     }
   }
 
+  /// Última nota del paciente (la más reciente), o null si no tiene.
+  Future<NotaDiario?> ultimaNotaDe(String pacienteId) async {
+    final notas = await notasDePaciente(pacienteId);
+    return notas.isEmpty ? null : notas.first;
+  }
+
   // ── Para el psicólogo: el diario de un paciente (solo lectura) ───────────────
   Future<List<NotaDiario>> notasDePaciente(String pacienteId) async {
     if (_sb == null) return [];

@@ -5,6 +5,7 @@ import '../../core/auth/auth_service.dart';
 import '../../core/auth/auth_screen.dart';
 import '../../core/auth/perfil_service.dart';
 import '../../plataforma/screens/diario/models/nota_model.dart';
+import '../../core/citas/citas_service.dart';
 import '../admin_shell.dart';
 import 'psicologo_citas_screen.dart';
 
@@ -217,8 +218,15 @@ class PsicologoRealScreen extends StatefulWidget {
   State<PsicologoRealScreen> createState() => _PsicologoRealScreenState();
 }
 
+class _ResumenPaciente {
+  final PacienteVinculado p;
+  final NotaDiario? ultima;
+  const _ResumenPaciente(this.p, this.ultima);
+}
+
 class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
-  List<PacienteVinculado> _pacientes = [];
+  List<_ResumenPaciente> _pacientes = [];
+  List<CitaReal> _citas = [];
   bool _cargando = true;
 
   @override
@@ -230,23 +238,56 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
   Future<void> _cargar() async {
     setState(() => _cargando = true);
     final pacientes = await PerfilService.instance.misPacientes();
+    final resumenes = <_ResumenPaciente>[];
+    for (final p in pacientes) {
+      final ultima = await PerfilService.instance.ultimaNotaDe(p.id);
+      resumenes.add(_ResumenPaciente(p, ultima));
+    }
+    final citas = await CitasService.instance.misCitasPsicologo();
     if (mounted) {
       setState(() {
-        _pacientes = pacientes;
+        _pacientes = resumenes;
+        _citas = citas;
         _cargando = false;
       });
     }
   }
 
+  bool _esHoy(DateTime d) {
+    final n = DateTime.now();
+    return d.year == n.year && d.month == n.month && d.day == n.day;
+  }
+
+  List<CitaReal> get _citasHoy => _citas
+      .where((c) =>
+          _esHoy(c.fecha) &&
+          (c.estado == 'agendada' || c.estado == 'confirmada'))
+      .toList();
+
+  List<CitaReal> get _proximas => _citas
+      .where((c) =>
+          c.fecha.isAfter(DateTime.now()) &&
+          !_esHoy(c.fecha) &&
+          (c.estado == 'agendada' || c.estado == 'confirmada'))
+      .toList();
+
+  // Pacientes con bajo ánimo en su última nota
+  List<_ResumenPaciente> get _alertasAnimo => _pacientes
+      .where((r) =>
+          r.ultima != null &&
+          (r.ultima!.estado == EstadoEmocional.ansioso ||
+              r.ultima!.estado == EstadoEmocional.triste))
+      .toList();
+
   @override
   Widget build(BuildContext context) {
-    final email = AuthService.instance.usuarioActual?.email ?? '';
+    final nombre = AuthService.instance.usuarioActual?.email?.split('@').first ?? '';
     return Scaffold(
       backgroundColor: PlatTheme.softBg,
       appBar: AppBar(
         backgroundColor: PlatTheme.darkNavy,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Mis pacientes',
+        title: const Text('Panel del psicólogo',
             style: TextStyle(
                 color: Colors.white,
                 fontSize: 17,
@@ -279,15 +320,228 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  _bannerCodigo(email),
-                  const SizedBox(height: 20),
+                  Text('Hola, $nombre 👋',
+                      style: const TextStyle(
+                          color: PlatTheme.textDark,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  const Text('Resumen de tu consulta hoy.',
+                      style: TextStyle(
+                          color: PlatTheme.textGray, fontSize: 14)),
+                  const SizedBox(height: 18),
+                  _stats(),
+                  const SizedBox(height: 22),
+                  if (_alertasAnimo.isNotEmpty) ...[
+                    _seccionTitulo('Alertas', Icons.notifications_active_rounded,
+                        const Color(0xFFDC2626)),
+                    const SizedBox(height: 10),
+                    ..._alertasAnimo.map(_alertaCard),
+                    const SizedBox(height: 22),
+                  ],
+                  _seccionTitulo('Citas de hoy', Icons.today_rounded,
+                      PlatTheme.purple),
+                  const SizedBox(height: 10),
+                  if (_citasHoy.isEmpty)
+                    _vacioMini('No tienes citas para hoy.')
+                  else
+                    ..._citasHoy.map(_citaCard),
+                  const SizedBox(height: 22),
+                  _seccionTitulo('Mis pacientes', Icons.people_alt_rounded,
+                      PlatTheme.purple),
+                  const SizedBox(height: 10),
                   if (_pacientes.isEmpty)
                     _vacio()
                   else
                     ..._pacientes.map(_pacienteCard),
+                  const SizedBox(height: 22),
+                  _bannerCodigo(
+                      AuthService.instance.usuarioActual?.email ?? ''),
                 ],
               ),
             ),
+    );
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  Widget _stats() {
+    Widget card(IconData ic, Color c, String valor, String label) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFEFECFF)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                      color: c.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Icon(ic, color: c, size: 19),
+                ),
+                const SizedBox(height: 10),
+                Text(valor,
+                    style: const TextStyle(
+                        color: PlatTheme.textDark,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold)),
+                Text(label,
+                    style: const TextStyle(
+                        color: PlatTheme.textGray, fontSize: 11.5)),
+              ],
+            ),
+          ),
+        );
+    return Row(
+      children: [
+        card(Icons.people_alt_rounded, PlatTheme.purple,
+            '${_pacientes.length}', 'Pacientes'),
+        const SizedBox(width: 12),
+        card(Icons.today_rounded, const Color(0xFF059669),
+            '${_citasHoy.length}', 'Citas hoy'),
+        const SizedBox(width: 12),
+        card(Icons.upcoming_rounded, const Color(0xFFD97706),
+            '${_proximas.length}', 'Próximas'),
+      ],
+    );
+  }
+
+  Widget _seccionTitulo(String t, IconData ic, Color c) {
+    return Row(
+      children: [
+        Icon(ic, color: c, size: 19),
+        const SizedBox(width: 8),
+        Text(t,
+            style: const TextStyle(
+                color: PlatTheme.textDark,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _vacioMini(String t) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFEFECFF)),
+        ),
+        child: Text(t,
+            style: const TextStyle(color: PlatTheme.textGray, fontSize: 13)),
+      );
+
+  Widget _alertaCard(_ResumenPaciente r) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
+      ),
+      child: Row(
+        children: [
+          Text(r.ultima!.estado.emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${r.p.nombre} reportó ${r.ultima!.estado.label.toLowerCase()}',
+                    style: const TextStyle(
+                        color: Color(0xFF991B1B),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+                Text('Revisa su diario emocional',
+                    style: const TextStyle(
+                        color: Color(0xFFDC2626), fontSize: 11.5)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => _DiarioPacienteScreen(paciente: r.p))),
+            child: const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFDC2626)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _citaCard(CitaReal c) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEFECFF)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+                shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
+            child: Center(
+              child: Text(
+                  c.pacienteNombre.isNotEmpty
+                      ? c.pacienteNombre[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    c.pacienteNombre.isNotEmpty
+                        ? c.pacienteNombre
+                        : 'Paciente',
+                    style: const TextStyle(
+                        color: PlatTheme.textDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
+                if (c.motivo.isNotEmpty)
+                  Text(c.motivo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: PlatTheme.textGray, fontSize: 12)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(c.hora,
+                  style: const TextStyle(
+                      color: PlatTheme.textDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700)),
+              Text(c.estado == 'confirmada' ? 'Confirmada' : 'Agendada',
+                  style: TextStyle(
+                      color: c.estado == 'confirmada'
+                          ? const Color(0xFF059669)
+                          : PlatTheme.purple,
+                      fontSize: 11)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -365,7 +619,8 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
     );
   }
 
-  Widget _pacienteCard(PacienteVinculado p) {
+  Widget _pacienteCard(_ResumenPaciente r) {
+    final p = r.p;
     final iniciales = p.nombre.trim().isEmpty
         ? '?'
         : p.nombre.trim().split(' ').map((w) => w[0]).take(2).join().toUpperCase();
@@ -405,10 +660,33 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
                           color: PlatTheme.textDark,
                           fontSize: 15,
                           fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text(p.email,
-                      style: const TextStyle(
-                          color: PlatTheme.textGray, fontSize: 12.5)),
+                  const SizedBox(height: 4),
+                  if (r.ultima != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: r.ultima!.estado.bgSuave,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(r.ultima!.estado.emoji,
+                              style: const TextStyle(fontSize: 11)),
+                          const SizedBox(width: 5),
+                          Text('Último: ${r.ultima!.estado.label}',
+                              style: TextStyle(
+                                  color: r.ultima!.estado.color,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    )
+                  else
+                    const Text('Sin notas aún',
+                        style: TextStyle(
+                            color: PlatTheme.textGray, fontSize: 12)),
                 ],
               ),
             ),
