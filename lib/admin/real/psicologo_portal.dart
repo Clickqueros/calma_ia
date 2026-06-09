@@ -4,15 +4,13 @@ import '../../core/supabase/supabase_config.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/auth/auth_screen.dart';
 import '../../core/auth/perfil_service.dart';
-import '../../plataforma/screens/diario/models/nota_model.dart';
 import '../../core/citas/citas_service.dart';
-import '../admin_shell.dart';
-import 'psicologo_citas_screen.dart';
+import '../../plataforma/screens/diario/models/nota_model.dart';
 
-/// Entrada al portal del psicólogo.
-/// - Sin backend → panel demo.
-/// - Con backend y sin sesión → login (registro como psicólogo).
-/// - Con sesión de psicólogo → pantalla REAL con sus pacientes.
+// ─────────────────────────────────────────────────────────────────────────────
+// Portal del psicólogo. Gate de login + panel real con datos de Supabase.
+// ─────────────────────────────────────────────────────────────────────────────
+
 class PsicologoPortal extends StatefulWidget {
   const PsicologoPortal({super.key});
 
@@ -38,54 +36,31 @@ class _PsicologoPortalState extends State<PsicologoPortal> {
   }
 
   Future<void> _init() async {
-    if (!SupabaseConfig.isConfigured) {
-      setState(() => _cargando = false);
-      return;
-    }
-    if (!AuthService.instance.haySesion) {
-      setState(() => _cargando = false);
+    if (!SupabaseConfig.isConfigured || !AuthService.instance.haySesion) {
+      if (mounted) setState(() => _cargando = false);
       return;
     }
     final rol = await PerfilService.instance.miRol();
-    if (mounted) {
-      setState(() {
-        _rol = rol;
-        _cargando = false;
-      });
-    }
+    if (mounted) setState(() { _rol = rol; _cargando = false; });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Sin backend → demo directo
-    if (!SupabaseConfig.isConfigured) return const AdminShell();
-
     if (_cargando) {
       return const Scaffold(
         backgroundColor: PlatTheme.softBg,
         body: Center(child: CircularProgressIndicator(color: PlatTheme.purple)),
       );
     }
-
-    // Sin sesión → login como psicólogo
-    if (!AuthService.instance.haySesion) {
-      return _LoginPsicologo(onListo: () {
-        setState(() => _cargando = true);
-        _init();
-      });
+    if (!SupabaseConfig.isConfigured || !AuthService.instance.haySesion) {
+      return _LoginPsicologo(onListo: () { setState(() => _cargando = true); _init(); });
     }
-
-    // Con sesión pero no es psicólogo
-    if (_rol != 'psychologist') {
-      return _MensajeRol();
-    }
-
-    // Psicólogo autenticado → pantalla real
-    return const PsicologoRealScreen();
+    if (_rol != 'psychologist') return _MensajeRol();
+    return const PsicologoShell();
   }
 }
 
-// ── Pantalla intermedia de login ──────────────────────────────────────────────
+// ── Login ─────────────────────────────────────────────────────────────────────
 
 class _LoginPsicologo extends StatelessWidget {
   final VoidCallback onListo;
@@ -114,7 +89,7 @@ class _LoginPsicologo extends StatelessWidget {
                   'Inicia sesión con la cuenta que te entregó tu administrador.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: PlatTheme.textGray, fontSize: 14)),
-              const SizedBox(height: 22),
+              const SizedBox(height: 24),
               SizedBox(
                 width: 260,
                 child: ElevatedButton(
@@ -138,22 +113,10 @@ class _LoginPsicologo extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                width: 260,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AdminShell())),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: PlatTheme.purple,
-                    side: const BorderSide(color: Color(0xFFE8E4FF)),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Ver panel demo',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
+              TextButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                child: const Text('Volver',
+                    style: TextStyle(color: PlatTheme.textGray, fontSize: 13)),
               ),
             ],
           ),
@@ -189,15 +152,13 @@ class _MensajeRol extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              const Text(
-                  'Inicia sesión con una cuenta profesional o regístrate como psicólogo.',
+              const Text('Inicia sesión con una cuenta profesional.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: PlatTheme.textGray, fontSize: 14)),
               const SizedBox(height: 20),
               TextButton(
-                onPressed: () async {
-                  await AuthService.instance.cerrarSesion();
-                },
+                onPressed: () async =>
+                    await AuthService.instance.cerrarSesion(),
                 child: const Text('Cerrar sesión',
                     style: TextStyle(color: PlatTheme.purple)),
               ),
@@ -209,14 +170,7 @@ class _MensajeRol extends StatelessWidget {
   }
 }
 
-// ── Pantalla REAL: pacientes del psicólogo ───────────────────────────────────
-
-class PsicologoRealScreen extends StatefulWidget {
-  const PsicologoRealScreen({super.key});
-
-  @override
-  State<PsicologoRealScreen> createState() => _PsicologoRealScreenState();
-}
+// ── Modelo de resumen ─────────────────────────────────────────────────────────
 
 class _ResumenPaciente {
   final PacienteVinculado p;
@@ -225,10 +179,30 @@ class _ResumenPaciente {
   const _ResumenPaciente(this.p, this.ultima, this.reporte);
 }
 
-class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
+// ─────────────────────────────────────────────────────────────────────────────
+// PsicologoShell — panel completo con sidebar (desktop) / bottomnav (móvil)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class PsicologoShell extends StatefulWidget {
+  const PsicologoShell({super.key});
+
+  @override
+  State<PsicologoShell> createState() => _PsicologoShellState();
+}
+
+class _PsicologoShellState extends State<PsicologoShell> {
+  int _selected = 0;
+  bool _cargando = true;
   List<_ResumenPaciente> _pacientes = [];
   List<CitaReal> _citas = [];
-  bool _cargando = true;
+
+  static const _nav = [
+    (Icons.grid_view_rounded, 'Dashboard'),
+    (Icons.event_note_rounded, 'Agenda'),
+    (Icons.people_alt_rounded, 'Pacientes'),
+  ];
+
+  bool get _small => MediaQuery.of(context).size.width < 900;
 
   @override
   void initState() {
@@ -242,9 +216,8 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
     final resumenes = <_ResumenPaciente>[];
     for (final p in pacientes) {
       final notas = await PerfilService.instance.notasDePaciente(p.id);
-      final reporte = calcularReporteSemanal(notas);
-      resumenes.add(
-          _ResumenPaciente(p, notas.isEmpty ? null : notas.first, reporte));
+      resumenes.add(_ResumenPaciente(
+          p, notas.isEmpty ? null : notas.first, calcularReporteSemanal(notas)));
     }
     final citas = await CitasService.instance.misCitasPsicologo();
     if (mounted) {
@@ -266,116 +239,306 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
           _esHoy(c.fecha) &&
           (c.estado == 'agendada' || c.estado == 'confirmada'))
       .toList();
-
   List<CitaReal> get _proximas => _citas
       .where((c) =>
           c.fecha.isAfter(DateTime.now()) &&
           !_esHoy(c.fecha) &&
           (c.estado == 'agendada' || c.estado == 'confirmada'))
       .toList();
-
-  // Pacientes con bajo ánimo en su última nota
-  List<_ResumenPaciente> get _alertasAnimo => _pacientes
+  List<_ResumenPaciente> get _alertas => _pacientes
       .where((r) =>
           r.ultima != null &&
           (r.ultima!.estado == EstadoEmocional.ansioso ||
               r.ultima!.estado == EstadoEmocional.triste))
       .toList();
 
+  String get _titulo => _nav[_selected].$2;
+
+  Widget get _contenido {
+    if (_cargando) {
+      return const Center(
+          child: CircularProgressIndicator(color: PlatTheme.purple));
+    }
+    return switch (_selected) {
+      1 => _agendaTab(),
+      2 => _pacientesTab(),
+      _ => _dashboardTab(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    final nombre = AuthService.instance.usuarioActual?.email?.split('@').first ?? '';
+    if (_small) {
+      return Scaffold(
+        backgroundColor: PlatTheme.softBg,
+        appBar: AppBar(
+          backgroundColor: PlatTheme.darkNavy,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_rounded,
+                color: Colors.white54, size: 18),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          title: Text(_titulo,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              onPressed: _cargar,
+            ),
+          ],
+        ),
+        body: _contenido,
+        bottomNavigationBar: _bottomNav(),
+      );
+    }
     return Scaffold(
       backgroundColor: PlatTheme.softBg,
-      appBar: AppBar(
-        backgroundColor: PlatTheme.darkNavy,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Panel del psicólogo',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            tooltip: 'Mis citas',
-            icon: const Icon(Icons.event_note_rounded, color: Colors.white),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const PsicologoCitasScreen())),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            onPressed: _cargar,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            onPressed: () async {
-              await AuthService.instance.cerrarSesion();
-              if (context.mounted) Navigator.of(context).pop();
-            },
-          ),
+      body: Row(
+        children: [
+          _sidebar(),
+          Expanded(child: _contenido),
         ],
       ),
-      body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: PlatTheme.purple))
-          : RefreshIndicator(
-              onRefresh: _cargar,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Text('Hola, $nombre 👋',
-                      style: const TextStyle(
-                          color: PlatTheme.textDark,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('Resumen de tu consulta hoy.',
-                      style: TextStyle(
-                          color: PlatTheme.textGray, fontSize: 14)),
-                  const SizedBox(height: 18),
-                  _stats(),
-                  const SizedBox(height: 22),
-                  if (_alertasAnimo.isNotEmpty) ...[
-                    _seccionTitulo('Alertas', Icons.notifications_active_rounded,
-                        const Color(0xFFDC2626)),
-                    const SizedBox(height: 10),
-                    ..._alertasAnimo.map(_alertaCard),
-                    const SizedBox(height: 22),
-                  ],
-                  _seccionTitulo('Citas de hoy', Icons.today_rounded,
-                      PlatTheme.purple),
-                  const SizedBox(height: 10),
-                  if (_citasHoy.isEmpty)
-                    _vacioMini('No tienes citas para hoy.')
-                  else
-                    ..._citasHoy.map(_citaCard),
-                  const SizedBox(height: 22),
-                  _seccionTitulo('Mis pacientes', Icons.people_alt_rounded,
-                      PlatTheme.purple),
-                  const SizedBox(height: 10),
-                  if (_pacientes.isEmpty)
-                    _vacio()
-                  else
-                    ..._pacientes.map(_pacienteCard),
-                  const SizedBox(height: 22),
-                  _bannerCodigo(
-                      AuthService.instance.usuarioActual?.email ?? ''),
-                ],
-              ),
-            ),
     );
   }
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
+  // ── Sidebar ────────────────────────────────────────────────────────────────
+  Widget _sidebar() {
+    final email = AuthService.instance.usuarioActual?.email ?? '';
+    return Container(
+      width: 256,
+      color: PlatTheme.darkNavy,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 30, 24, 6),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: const BoxDecoration(
+                      shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
+                  child: const Icon(Icons.self_improvement,
+                      color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Text('calma',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(107, 78, 255, 0.25),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text('PSICÓLOGO',
+                  style: TextStyle(
+                      color: PlatTheme.softBlue,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2)),
+            ),
+          ),
+          const SizedBox(height: 28),
+          ..._nav.asMap().entries.map((e) =>
+              _sidebarItem(e.key, e.value.$1, e.value.$2)),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text(email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Color.fromRGBO(176, 191, 255, 0.5), fontSize: 11)),
+          ),
+          GestureDetector(
+            onTap: () async {
+              final nav = Navigator.of(context);
+              await AuthService.instance.cerrarSesion();
+              nav.maybePop();
+            },
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(28, 8, 24, 22),
+              child: const Row(
+                children: [
+                  Icon(Icons.logout_rounded, color: Color(0xFFFF8A8A), size: 20),
+                  SizedBox(width: 12),
+                  Text('Cerrar sesión',
+                      style: TextStyle(
+                          color: Color(0xFFFF8A8A),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sidebarItem(int i, IconData icon, String label) {
+    final sel = _selected == i;
+    return GestureDetector(
+      onTap: () => setState(() => _selected = i),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        decoration: BoxDecoration(
+          color: sel
+              ? const Color.fromRGBO(107, 78, 255, 0.22)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: sel
+                  ? const Color.fromRGBO(107, 78, 255, 0.4)
+                  : Colors.transparent),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                color: sel
+                    ? PlatTheme.softPurple
+                    : const Color.fromRGBO(176, 191, 255, 0.55),
+                size: 20),
+            const SizedBox(width: 12),
+            Text(label,
+                style: TextStyle(
+                    color: sel
+                        ? Colors.white
+                        : const Color.fromRGBO(176, 191, 255, 0.65),
+                    fontSize: 14,
+                    fontWeight: sel ? FontWeight.w600 : FontWeight.w400)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomNav() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: PlatTheme.darkNavy,
+        border: Border(top: BorderSide(color: Color(0xFF2D2460))),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: _nav.asMap().entries.map((e) {
+              final sel = _selected == e.key;
+              return GestureDetector(
+                onTap: () => setState(() => _selected = e.key),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? const Color.fromRGBO(107, 78, 255, 0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(e.value.$1,
+                          color: sel
+                              ? PlatTheme.softPurple
+                              : const Color.fromRGBO(176, 191, 255, 0.5),
+                          size: 22),
+                      const SizedBox(height: 4),
+                      Text(e.value.$2,
+                          style: TextStyle(
+                              color: sel
+                                  ? PlatTheme.softPurple
+                                  : const Color.fromRGBO(176, 191, 255, 0.5),
+                              fontSize: 10,
+                              fontWeight:
+                                  sel ? FontWeight.w700 : FontWeight.w400)),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Tab: Dashboard ───────────────────────────────────────────────────────────
+  Widget _dashboardTab() {
+    final nombre =
+        AuthService.instance.usuarioActual?.email?.split('@').first ?? '';
+    return RefreshIndicator(
+      onRefresh: _cargar,
+      child: ListView(
+        padding: EdgeInsets.all(_small ? 18 : 32),
+        children: [
+          Text('Hola, $nombre 👋',
+              style: const TextStyle(
+                  color: PlatTheme.textDark,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          const Text('Resumen de tu consulta.',
+              style: TextStyle(color: PlatTheme.textGray, fontSize: 14)),
+          const SizedBox(height: 18),
+          _stats(),
+          const SizedBox(height: 22),
+          if (_alertas.isNotEmpty) ...[
+            _tituloSeccion('Alertas', Icons.notifications_active_rounded,
+                const Color(0xFFDC2626)),
+            const SizedBox(height: 10),
+            ..._alertas.map(_alertaCard),
+            const SizedBox(height: 22),
+          ],
+          _tituloSeccion('Citas de hoy', Icons.today_rounded, PlatTheme.purple),
+          const SizedBox(height: 10),
+          if (_citasHoy.isEmpty)
+            _cajaVacia('No tienes citas para hoy.')
+          else
+            ..._citasHoy.map((c) => _citaMini(c)),
+          const SizedBox(height: 22),
+          _tituloSeccion('Bienestar de tus pacientes',
+              Icons.favorite_rounded, PlatTheme.purple),
+          const SizedBox(height: 10),
+          if (_pacientes.isEmpty)
+            _cajaVacia('Aún no tienes pacientes vinculados.')
+          else
+            ..._pacientes.map((r) => _pacienteCard(r)),
+          const SizedBox(height: 22),
+          _bannerCodigo(),
+        ],
+      ),
+    );
+  }
+
   Widget _stats() {
-    Widget card(IconData ic, Color c, String valor, String label) => Expanded(
+    Widget card(IconData ic, Color c, String v, String l) => Expanded(
           child: Container(
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFEFECFF)),
-            ),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFEFECFF))),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -388,209 +551,117 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
                   child: Icon(ic, color: c, size: 19),
                 ),
                 const SizedBox(height: 10),
-                Text(valor,
+                Text(v,
                     style: const TextStyle(
                         color: PlatTheme.textDark,
                         fontSize: 22,
                         fontWeight: FontWeight.bold)),
-                Text(label,
+                Text(l,
                     style: const TextStyle(
                         color: PlatTheme.textGray, fontSize: 11.5)),
               ],
             ),
           ),
         );
-    return Row(
-      children: [
-        card(Icons.people_alt_rounded, PlatTheme.purple,
-            '${_pacientes.length}', 'Pacientes'),
-        const SizedBox(width: 12),
-        card(Icons.today_rounded, const Color(0xFF059669),
-            '${_citasHoy.length}', 'Citas hoy'),
-        const SizedBox(width: 12),
-        card(Icons.upcoming_rounded, const Color(0xFFD97706),
-            '${_proximas.length}', 'Próximas'),
-      ],
-    );
+    return Row(children: [
+      card(Icons.people_alt_rounded, PlatTheme.purple, '${_pacientes.length}',
+          'Pacientes'),
+      const SizedBox(width: 12),
+      card(Icons.today_rounded, const Color(0xFF059669), '${_citasHoy.length}',
+          'Citas hoy'),
+      const SizedBox(width: 12),
+      card(Icons.upcoming_rounded, const Color(0xFFD97706),
+          '${_proximas.length}', 'Próximas'),
+    ]);
   }
 
-  Widget _seccionTitulo(String t, IconData ic, Color c) {
-    return Row(
-      children: [
-        Icon(ic, color: c, size: 19),
-        const SizedBox(width: 8),
-        Text(t,
-            style: const TextStyle(
-                color: PlatTheme.textDark,
-                fontSize: 16,
-                fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
+  Widget _tituloSeccion(String t, IconData ic, Color c) => Row(
+        children: [
+          Icon(ic, color: c, size: 19),
+          const SizedBox(width: 8),
+          Text(t,
+              style: const TextStyle(
+                  color: PlatTheme.textDark,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
+        ],
+      );
 
-  Widget _vacioMini(String t) => Container(
+  Widget _cajaVacia(String t) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFEFECFF)),
-        ),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFEFECFF))),
         child: Text(t,
             style: const TextStyle(color: PlatTheme.textGray, fontSize: 13)),
       );
 
-  Widget _alertaCard(_ResumenPaciente r) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFCA5A5)),
-      ),
-      child: Row(
-        children: [
-          Text(r.ultima!.estado.emoji, style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${r.p.nombre} reportó ${r.ultima!.estado.label.toLowerCase()}',
-                    style: const TextStyle(
-                        color: Color(0xFF991B1B),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600)),
-                Text('Revisa su diario emocional',
-                    style: const TextStyle(
-                        color: Color(0xFFDC2626), fontSize: 11.5)),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => _DiarioPacienteScreen(paciente: r.p))),
-            child: const Icon(Icons.chevron_right_rounded,
-                color: Color(0xFFDC2626)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _citaCard(CitaReal c) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEFECFF)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-                shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
-            child: Center(
+  Widget _alertaCard(_ResumenPaciente r) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFCA5A5))),
+        child: Row(
+          children: [
+            Text(r.ultima!.estado.emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 11),
+            Expanded(
               child: Text(
-                  c.pacienteNombre.isNotEmpty
-                      ? c.pacienteNombre[0].toUpperCase()
-                      : '?',
+                  '${r.p.nombre} reportó ${r.ultima!.estado.label.toLowerCase()}',
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    c.pacienteNombre.isNotEmpty
-                        ? c.pacienteNombre
-                        : 'Paciente',
-                    style: const TextStyle(
-                        color: PlatTheme.textDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold)),
-                if (c.motivo.isNotEmpty)
-                  Text(c.motivo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: PlatTheme.textGray, fontSize: 12)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(c.hora,
-                  style: const TextStyle(
-                      color: PlatTheme.textDark,
+                      color: Color(0xFF991B1B),
                       fontSize: 13,
-                      fontWeight: FontWeight.w700)),
-              Text(c.estado == 'confirmada' ? 'Confirmada' : 'Agendada',
-                  style: TextStyle(
-                      color: c.estado == 'confirmada'
-                          ? const Color(0xFF059669)
-                          : PlatTheme.purple,
-                      fontSize: 11)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+                      fontWeight: FontWeight.w600)),
+            ),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => _DiarioPacienteScreen(paciente: r.p))),
+              child: const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFFDC2626)),
+            ),
+          ],
+        ),
+      );
 
-  Widget _bannerCodigo(String email) {
+  Widget _bannerCodigo() {
+    final email = AuthService.instance.usuarioActual?.email ?? '';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [PlatTheme.darkNavy, Color(0xFF2D1B69)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+            colors: [PlatTheme.darkNavy, Color(0xFF2D1B69)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Tu código para pacientes',
+          const Text('Tu correo para vincular pacientes',
               style: TextStyle(
                   color: Colors.white,
-                  fontSize: 14,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          const Text(
-              'Comparte este correo con tus pacientes. Desde su diario pueden '
-              'conectarse contigo y verás su evolución emocional aquí.',
-              style: TextStyle(color: PlatTheme.softBlue, fontSize: 12.5, height: 1.4)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
             child: Row(
               children: [
                 const Icon(Icons.alternate_email_rounded,
                     color: PlatTheme.softPurple, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(email,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600)),
-                ),
+                    child: Text(email,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600))),
               ],
             ),
           ),
@@ -599,24 +670,228 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
     );
   }
 
-  Widget _vacio() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
+  // ── Tab: Agenda ────────────────────────────────────────────────────────────
+  Widget _agendaTab() {
+    const meses = ['', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago',
+      'sep', 'oct', 'nov', 'dic'];
+    const dias = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    final ordenadas = [..._citas]..sort((a, b) => a.fecha.compareTo(b.fecha));
+
+    return RefreshIndicator(
+      onRefresh: _cargar,
+      child: ListView(
+        padding: EdgeInsets.all(_small ? 18 : 32),
         children: [
-          Icon(Icons.people_outline_rounded,
-              size: 52, color: PlatTheme.textGray.withValues(alpha: 0.4)),
-          const SizedBox(height: 16),
-          const Text('Aún no tienes pacientes vinculados',
-              style: TextStyle(
-                  color: PlatTheme.textDark,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          const Text(
-              'Comparte tu correo (arriba) con un paciente para que se conecte desde su diario.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: PlatTheme.textGray, fontSize: 13)),
+          if (!_small)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 18),
+              child: Text('Agenda',
+                  style: TextStyle(
+                      color: PlatTheme.textDark,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold)),
+            ),
+          if (ordenadas.isEmpty)
+            _cajaVacia('No tienes citas. Tus pacientes pueden agendar desde su app.')
+          else
+            ...ordenadas.map((c) {
+              final color = switch (c.estado) {
+                'confirmada' => const Color(0xFF059669),
+                'cancelada' => const Color(0xFFDC2626),
+                'completada' => const Color(0xFF6B7280),
+                _ => PlatTheme.purple,
+              };
+              final label = switch (c.estado) {
+                'confirmada' => 'Confirmada',
+                'cancelada' => 'Cancelada',
+                'completada' => 'Completada',
+                _ => 'Agendada',
+              };
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFEFECFF))),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: PlatTheme.purpleGradient),
+                          child: Center(
+                              child: Text(
+                                  c.pacienteNombre.isNotEmpty
+                                      ? c.pacienteNombre[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16))),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  c.pacienteNombre.isNotEmpty
+                                      ? c.pacienteNombre
+                                      : 'Paciente',
+                                  style: const TextStyle(
+                                      color: PlatTheme.textDark,
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.bold)),
+                              if (c.motivo.isNotEmpty)
+                                Text(c.motivo,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: PlatTheme.textGray,
+                                        fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6)),
+                          child: Text(label,
+                              style: TextStyle(
+                                  color: color,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(height: 1, color: const Color(0xFFF2F0FF)),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded,
+                            size: 14, color: PlatTheme.textGray),
+                        const SizedBox(width: 6),
+                        Text(
+                            '${dias[c.fecha.weekday]} ${c.fecha.day} ${meses[c.fecha.month]}',
+                            style: const TextStyle(
+                                color: PlatTheme.textDark,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 14),
+                        Icon(Icons.schedule_rounded,
+                            size: 14, color: PlatTheme.textGray),
+                        const SizedBox(width: 5),
+                        Text(c.hora,
+                            style: const TextStyle(
+                                color: PlatTheme.textDark,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    if (c.estado == 'agendada' || c.estado == 'confirmada') ...[
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          if (c.estado == 'agendada')
+                            Expanded(
+                                child: _btnCita('Confirmar',
+                                    const Color(0xFF059669), () => _cambiarCita(c, 'confirmada'))),
+                          if (c.estado == 'confirmada')
+                            Expanded(
+                                child: _btnCita('Completar',
+                                    const Color(0xFF6B7280), () => _cambiarCita(c, 'completada'))),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: _btnCita('Cancelar',
+                                  const Color(0xFFDC2626), () => _cambiarCita(c, 'cancelada'),
+                                  outline: true)),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cambiarCita(CitaReal c, String estado) async {
+    await CitasService.instance.cambiarEstado(c.id, estado);
+    _cargar();
+  }
+
+  Widget _btnCita(String label, Color color, VoidCallback onTap,
+      {bool outline = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+            color: outline ? Colors.transparent : color,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: color)),
+        child: Text(label,
+            style: TextStyle(
+                color: outline ? color : Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  // ── Tab: Pacientes ───────────────────────────────────────────────────────────
+  Widget _pacientesTab() {
+    return RefreshIndicator(
+      onRefresh: _cargar,
+      child: ListView(
+        padding: EdgeInsets.all(_small ? 18 : 32),
+        children: [
+          if (!_small)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 18),
+              child: Text('Pacientes',
+                  style: TextStyle(
+                      color: PlatTheme.textDark,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold)),
+            ),
+          if (_pacientes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                children: [
+                  Icon(Icons.people_outline_rounded,
+                      size: 52,
+                      color: PlatTheme.textGray.withValues(alpha: 0.4)),
+                  const SizedBox(height: 14),
+                  const Text('Aún no tienes pacientes vinculados',
+                      style: TextStyle(
+                          color: PlatTheme.textDark,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  const Text(
+                      'Comparte tu correo con un paciente o pide al admin que te asigne.',
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(color: PlatTheme.textGray, fontSize: 13)),
+                ],
+              ),
+            )
+          else
+            ..._pacientes.map((r) => _pacienteCard(r)),
         ],
       ),
     );
@@ -624,7 +899,7 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
 
   Widget _pacienteCard(_ResumenPaciente r) {
     final p = r.p;
-    final iniciales = p.nombre.trim().isEmpty
+    final inic = p.nombre.trim().isEmpty
         ? '?'
         : p.nombre.trim().split(' ').map((w) => w[0]).take(2).join().toUpperCase();
     return GestureDetector(
@@ -634,10 +909,9 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFEFECFF)),
-        ),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFEFECFF))),
         child: Row(
           children: [
             Container(
@@ -646,12 +920,11 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
               decoration: const BoxDecoration(
                   shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
               child: Center(
-                child: Text(iniciales,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
-              ),
+                  child: Text(inic,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16))),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -689,7 +962,6 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
                 ],
               ),
             ),
-            // Puntaje semanal
             if (r.reporte.promedio != null) ...[
               Column(
                 children: [
@@ -699,8 +971,8 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                   const Text('/100',
-                      style: TextStyle(
-                          color: PlatTheme.textGray, fontSize: 10)),
+                      style:
+                          TextStyle(color: PlatTheme.textGray, fontSize: 10)),
                 ],
               ),
               const SizedBox(width: 8),
@@ -711,9 +983,82 @@ class _PsicologoRealScreenState extends State<PsicologoRealScreen> {
       ),
     );
   }
+
+  Widget _citaMini(CitaReal c) {
+    final video = c.modalidad == 'Videollamada';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFEFECFF))),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+                shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
+            child: Center(
+                child: Text(
+                    c.pacienteNombre.isNotEmpty
+                        ? c.pacienteNombre[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15))),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(c.pacienteNombre.isNotEmpty ? c.pacienteNombre : 'Paciente',
+                    style: const TextStyle(
+                        color: PlatTheme.textDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
+                if (c.motivo.isNotEmpty)
+                  Text(c.motivo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: PlatTheme.textGray, fontSize: 12)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(c.hora,
+                  style: const TextStyle(
+                      color: PlatTheme.textDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700)),
+              Row(
+                children: [
+                  Icon(video ? Icons.videocam_rounded : Icons.place_rounded,
+                      size: 12, color: PlatTheme.textGray),
+                  const SizedBox(width: 3),
+                  Text(c.estado == 'confirmada' ? 'Confirmada' : 'Agendada',
+                      style: TextStyle(
+                          color: c.estado == 'confirmada'
+                              ? const Color(0xFF059669)
+                              : PlatTheme.purple,
+                          fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// ── Diario del paciente (solo lectura para el psicólogo) ─────────────────────
+// ── Diario del paciente (solo lectura) ───────────────────────────────────────
 
 class _DiarioPacienteScreen extends StatefulWidget {
   final PacienteVinculado paciente;
@@ -736,12 +1081,7 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
   Future<void> _cargar() async {
     final notas =
         await PerfilService.instance.notasDePaciente(widget.paciente.id);
-    if (mounted) {
-      setState(() {
-        _notas = notas;
-        _cargando = false;
-      });
-    }
+    if (mounted) setState(() { _notas = notas; _cargando = false; });
   }
 
   @override
@@ -763,9 +1103,8 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                 Container(
                   padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0EEFF),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                      color: const Color(0xFFF0EEFF),
+                      borderRadius: BorderRadius.circular(12)),
                   child: const Row(
                     children: [
                       Icon(Icons.menu_book_rounded,
@@ -792,11 +1131,11 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                 const SizedBox(height: 12),
                 if (_notas.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 50),
+                    padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(
                       child: Text('Este paciente aún no tiene notas.',
-                          style:
-                              TextStyle(color: PlatTheme.textGray, fontSize: 14)),
+                          style: TextStyle(
+                              color: PlatTheme.textGray, fontSize: 14)),
                     ),
                   )
                 else
@@ -806,16 +1145,14 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
     );
   }
 
-  // ── Reporte semanal ──────────────────────────────────────────────────────────
   Widget _reporteSemanalCard(ReporteSemanal r) {
     const nombresDia = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEFECFF)),
-      ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEFECFF))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -834,8 +1171,7 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                         fontSize: 24,
                         fontWeight: FontWeight.bold)),
                 const Text(' /100',
-                    style:
-                        TextStyle(color: PlatTheme.textGray, fontSize: 12)),
+                    style: TextStyle(color: PlatTheme.textGray, fontSize: 12)),
               ],
             ],
           ),
@@ -843,11 +1179,10 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
           Row(
             children: [
               Container(
-                width: 8,
-                height: 8,
-                decoration:
-                    BoxDecoration(color: r.color, shape: BoxShape.circle),
-              ),
+                  width: 8,
+                  height: 8,
+                  decoration:
+                      BoxDecoration(color: r.color, shape: BoxShape.circle)),
               const SizedBox(width: 7),
               Text(r.etiqueta,
                   style: TextStyle(
@@ -856,25 +1191,23 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                       fontWeight: FontWeight.w600)),
               const Spacer(),
               Text('${r.registros} registros',
-                  style: const TextStyle(
-                      color: PlatTheme.textGray, fontSize: 11.5)),
+                  style:
+                      const TextStyle(color: PlatTheme.textGray, fontSize: 11.5)),
             ],
           ),
           const SizedBox(height: 18),
-          // Barras de los 7 días
           SizedBox(
             height: 120,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: r.dias.asMap().entries.map((e) {
-                final dia = e.value;
-                final tieneData = dia.puntaje != null;
-                final altura = tieneData ? (dia.puntaje! / 100 * 86) : 4.0;
+              children: r.dias.map((dia) {
+                final tiene = dia.puntaje != null;
+                final altura = tiene ? (dia.puntaje! / 100 * 86) : 4.0;
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (tieneData)
+                    if (tiene)
                       Text(dia.estado!.emoji,
                           style: const TextStyle(fontSize: 13))
                     else
@@ -884,11 +1217,10 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                       width: 26,
                       height: altura,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        color: tieneData
-                            ? dia.estado!.color
-                            : const Color(0xFFE8E4FF),
-                      ),
+                          borderRadius: BorderRadius.circular(6),
+                          color: tiene
+                              ? dia.estado!.color
+                              : const Color(0xFFE8E4FF)),
                     ),
                     const SizedBox(height: 6),
                     Text(nombresDia[dia.fecha.weekday - 1],
@@ -909,21 +1241,20 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEFECFF)),
-      ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEFECFF))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: n.estado.bgSuave,
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                    color: n.estado.bgSuave,
+                    borderRadius: BorderRadius.circular(20)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
