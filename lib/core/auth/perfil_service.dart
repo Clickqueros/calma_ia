@@ -92,14 +92,28 @@ class PerfilService {
     final p = await miPerfil();
     final pid = p?['psicologo_id'];
     if (pid == null) return null;
+    return psicologoPorId(pid.toString());
+  }
+
+  /// Perfil de un psicólogo por su id (robusto ante columnas faltantes).
+  Future<Map<String, dynamic>?> psicologoPorId(String id) async {
+    if (_sb == null) return null;
     try {
       return await _sb!
           .from('profiles')
           .select('nombre, email, avatar_url')
-          .eq('id', pid)
+          .eq('id', id)
           .maybeSingle();
     } catch (_) {
-      return null;
+      try {
+        return await _sb!
+            .from('profiles')
+            .select('nombre, email')
+            .eq('id', id)
+            .maybeSingle();
+      } catch (_) {
+        return null;
+      }
     }
   }
 

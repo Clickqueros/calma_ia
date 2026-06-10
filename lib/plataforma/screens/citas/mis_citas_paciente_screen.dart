@@ -33,8 +33,14 @@ class _MisCitasPacienteScreenState extends State<MisCitasPacienteScreen> {
 
   Future<void> _cargar() async {
     setState(() => _cargando = true);
-    final psico = await PerfilService.instance.miPsicologo();
     final citas = await CitasService.instance.misCitasPaciente();
+    var psico = await PerfilService.instance.miPsicologo();
+    // Respaldo: si el perfil no tiene psicólogo pero sí hay citas,
+    // tomamos el psicólogo de la cita más reciente.
+    if (psico == null && citas.isNotEmpty) {
+      psico = await PerfilService.instance
+          .psicologoPorId(citas.first.psicologoId);
+    }
     if (mounted) {
       setState(() {
         _psicologo = psico;
@@ -207,6 +213,29 @@ class _MisCitasPacienteScreenState extends State<MisCitasPacienteScreen> {
     );
   }
 
+  Widget _miniAvatar() {
+    final avatar = (_psicologo?['avatar_url'] as String?) ?? '';
+    if (avatar.isNotEmpty) {
+      return Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          image: DecorationImage(
+              image: NetworkImage(avatar), fit: BoxFit.cover),
+        ),
+      );
+    }
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: const BoxDecoration(
+          shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
+      child: const Icon(Icons.medical_services_rounded,
+          color: Colors.white, size: 15),
+    );
+  }
+
   Widget _vacioCitas() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -243,6 +272,29 @@ class _MisCitasPacienteScreenState extends State<MisCitasPacienteScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_psicologo != null) ...[
+            Row(
+              children: [
+                _miniAvatar(),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                      (_psicologo!['nombre'] as String?)?.isNotEmpty == true
+                          ? _psicologo!['nombre']
+                          : 'Tu psicólogo',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: PlatTheme.textDark,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(height: 1, color: const Color(0xFFF2F0FF)),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               Icon(Icons.calendar_today_rounded,

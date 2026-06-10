@@ -25,6 +25,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String get _inicial =>
       _nombre.isNotEmpty ? _nombre[0].toUpperCase() : 'E';
 
+  String get _saludo {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Buenos días';
+    if (h < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
+  IconData get _saludoIcono {
+    final h = DateTime.now().hour;
+    if (h >= 19 || h < 5) return Icons.nightlight_round;
+    return Icons.wb_sunny_rounded;
+  }
+
+  Color get _saludoColor {
+    final h = DateTime.now().hour;
+    if (h >= 19 || h < 5) return const Color(0xFF6B8CFF); // luna azulada
+    if (h < 12) return const Color(0xFFFBBF24); // sol amarillo mañana
+    return const Color(0xFFF59E0B); // tarde ámbar
+  }
+
+  Widget _saludoWidget(double fontSize) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(_saludoIcono, color: _saludoColor, size: fontSize),
+        SizedBox(width: fontSize * 0.35),
+        Flexible(
+          child: Text('$_saludo, $_nombreCorto',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: PlatTheme.textDark,
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -680,11 +719,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('☀️  Buenos días, $_nombreCorto',
-              style: const TextStyle(
-                  color: PlatTheme.textDark,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
+          _saludoWidget(22),
           const SizedBox(height: 8),
           const Text('Este es tu espacio de calma.',
               style: TextStyle(color: PlatTheme.textGray, fontSize: 14)),
@@ -716,11 +751,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('☀️  Buenos días, $_nombreCorto',
-                  style: const TextStyle(
-                      color: PlatTheme.textDark,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold)),
+              _saludoWidget(30),
               const SizedBox(height: 8),
               const Text('Este es tu espacio de calma. Hoy es un buen día para cuidarte.',
                   style: TextStyle(color: PlatTheme.textGray, fontSize: 16)),
