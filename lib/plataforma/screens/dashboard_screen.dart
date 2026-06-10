@@ -8,6 +8,7 @@ import 'citas/citas_screen.dart';
 import 'citas/mis_citas_paciente_screen.dart';
 import '../../core/supabase/supabase_config.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/auth/perfil_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,6 +19,24 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedNav = 0;
+  String _nombre = '';
+
+  String get _nombreCorto => _nombre.isNotEmpty ? _nombre.split(' ').first : 'Explorador';
+  String get _inicial =>
+      _nombre.isNotEmpty ? _nombre[0].toUpperCase() : 'E';
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarNombre();
+  }
+
+  Future<void> _cargarNombre() async {
+    final perfil = await PerfilService.instance.miPerfil();
+    if (mounted && perfil != null) {
+      setState(() => _nombre = (perfil['nombre'] as String?) ?? '');
+    }
+  }
 
   static const _navItems = [
     (Icons.home_rounded, 'Inicio'),
@@ -101,9 +120,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             shape: BoxShape.circle,
             gradient: PlatTheme.purpleGradient,
           ),
-          child: const Center(
-            child: Text('E',
-                style: TextStyle(
+          child: Center(
+            child: Text(_inicial,
+                style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14)),
@@ -261,25 +280,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
             height: 38,
             decoration: const BoxDecoration(
                 shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
-            child: const Center(
-              child: Text('E',
-                  style: TextStyle(
+            child: Center(
+              child: Text(_inicial,
+                  style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
             ),
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Explorador',
-                    style: TextStyle(
+                Text(_nombreCorto,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w600)),
-                Text('Bienestar activo',
+                const Text('Bienestar activo',
                     style:
                         TextStyle(color: PlatTheme.softBlue, fontSize: 12)),
               ],
@@ -659,8 +680,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('☀️  Buenos días, Explorador',
-              style: TextStyle(
+          Text('☀️  Buenos días, $_nombreCorto',
+              style: const TextStyle(
                   color: PlatTheme.textDark,
                   fontSize: 22,
                   fontWeight: FontWeight.bold)),
@@ -691,17 +712,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('☀️  Buenos días, Explorador',
-                  style: TextStyle(
+              Text('☀️  Buenos días, $_nombreCorto',
+                  style: const TextStyle(
                       color: PlatTheme.textDark,
                       fontSize: 30,
                       fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('Este es tu espacio de calma. Hoy es un buen día para cuidarte.',
+              const SizedBox(height: 8),
+              const Text('Este es tu espacio de calma. Hoy es un buen día para cuidarte.',
                   style: TextStyle(color: PlatTheme.textGray, fontSize: 16)),
             ],
           ),
