@@ -15,6 +15,7 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
   bool _cargando = true;
   String? _psicologoId;
   String _miNombre = '';
+  List<CitaReal> _misCitas = [];
 
   DateTime? _fecha;
   String? _hora;
@@ -42,10 +43,22 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
     final perfil = await PerfilService.instance.miPerfil();
     _miNombre = (perfil?['nombre'] as String?) ?? '';
     _psicologoId = perfil?['psicologo_id']?.toString();
+    _misCitas = await CitasService.instance.misCitasPaciente();
     if (mounted) setState(() => _cargando = false);
   }
 
-  bool get _puedeAgendar => _fecha != null && _hora != null && !_guardando;
+  /// ¿Ya tengo una cita (no cancelada) ese día y hora?
+  bool _ocupada(DateTime dia, String hora) {
+    return _misCitas.any((c) =>
+        c.estado != 'cancelada' &&
+        c.hora == hora &&
+        c.fecha.year == dia.year &&
+        c.fecha.month == dia.month &&
+        c.fecha.day == dia.day);
+  }
+
+  bool get _puedeAgendar =>
+      _fecha != null && _hora != null && !_guardando && !_ocupada(_fecha!, _hora!);
 
   Future<void> _agendar() async {
     if (_psicologoId == null) return;
@@ -179,7 +192,11 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
                   _fecha!.day == d.day &&
                   _fecha!.month == d.month;
               return GestureDetector(
-                onTap: () => setState(() => _fecha = d),
+                onTap: () => setState(() {
+                  _fecha = d;
+                  // Si la hora elegida ya está ocupada ese día, deselecciónala.
+                  if (_hora != null && _ocupada(d, _hora!)) _hora = null;
+                }),
                 child: Container(
                   width: 64,
                   margin: const EdgeInsets.only(right: 10),
@@ -223,26 +240,60 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
           runSpacing: 10,
           children: _horas.map((h) {
             final sel = _hora == h;
+            final ocupada = _fecha != null && _ocupada(_fecha!, h);
             return GestureDetector(
-              onTap: () => setState(() => _hora = h),
+              // Si está ocupada, no se puede seleccionar.
+              onTap: ocupada ? null : () => setState(() => _hora = h),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                 decoration: BoxDecoration(
-                  color: sel ? PlatTheme.purple : Colors.white,
+                  color: ocupada
+                      ? const Color(0xFFF1F0F5)
+                      : (sel ? PlatTheme.purple : Colors.white),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: sel ? PlatTheme.purple : const Color(0xFFE8E4FF)),
+                      color: ocupada
+                          ? const Color(0xFFE8E4FF)
+                          : (sel ? PlatTheme.purple : const Color(0xFFE8E4FF))),
                 ),
-                child: Text(h,
-                    style: TextStyle(
-                        color: sel ? Colors.white : PlatTheme.textDark,
-                        fontSize: 13.5,
-                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (ocupada) ...[
+                      const Icon(Icons.lock_clock_rounded,
+                          size: 13, color: Color(0xFFB0B0C0)),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(h,
+                        style: TextStyle(
+                            color: ocupada
+                                ? const Color(0xFFB0B0C0)
+                                : (sel ? Colors.white : PlatTheme.textDark),
+                            fontSize: 13.5,
+                            fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                            decoration: ocupada
+                                ? TextDecoration.lineThrough
+                                : null)),
+                  ],
+                ),
               ),
             );
           }).toList(),
         ),
+        if (_fecha != null &&
+            _horas.where((h) => _ocupada(_fecha!, h)).isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              Icon(Icons.info_outline_rounded,
+                  size: 14, color: PlatTheme.textGray),
+              SizedBox(width: 6),
+              Text('Las horas en gris ya las tienes agendadas.',
+                  style: TextStyle(color: PlatTheme.textGray, fontSize: 12)),
+            ],
+          ),
+        ],
         const SizedBox(height: 24),
         _label('3. Modalidad'),
         const SizedBox(height: 10),
