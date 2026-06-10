@@ -5,6 +5,7 @@ import '../../core/auth/auth_service.dart';
 import '../../core/auth/auth_screen.dart';
 import '../../core/auth/perfil_service.dart';
 import '../../core/citas/citas_service.dart';
+import '../../core/clinica/archivo_picker.dart';
 import '../../plataforma/screens/diario/models/nota_model.dart';
 import 'historia_clinica_screen.dart';
 
@@ -196,6 +197,9 @@ class _PsicologoShellState extends State<PsicologoShell> {
   bool _cargando = true;
   List<_ResumenPaciente> _pacientes = [];
   List<CitaReal> _citas = [];
+  String _avatarUrl = '';
+  String _nombre = '';
+  bool _subiendoAvatar = false;
 
   static const _nav = [
     (Icons.grid_view_rounded, 'Dashboard'),
@@ -213,6 +217,9 @@ class _PsicologoShellState extends State<PsicologoShell> {
 
   Future<void> _cargar() async {
     setState(() => _cargando = true);
+    final perfil = await PerfilService.instance.miPerfil();
+    _avatarUrl = (perfil?['avatar_url'] as String?) ?? '';
+    _nombre = (perfil?['nombre'] as String?) ?? '';
     final pacientes = await PerfilService.instance.misPacientes();
     final resumenes = <_ResumenPaciente>[];
     for (final p in pacientes) {
@@ -354,7 +361,9 @@ class _PsicologoShellState extends State<PsicologoShell> {
                       letterSpacing: 1.2)),
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
+          _perfilSidebar(),
+          const SizedBox(height: 20),
           ..._nav.asMap().entries.map((e) =>
               _sidebarItem(e.key, e.value.$1, e.value.$2)),
           const Spacer(),
@@ -390,6 +399,120 @@ class _PsicologoShellState extends State<PsicologoShell> {
         ],
       ),
     );
+  }
+
+  // ── Perfil con foto (sidebar) ────────────────────────────────────────────────
+  Widget _perfilSidebar() {
+    final email = AuthService.instance.usuarioActual?.email ?? '';
+    final nombre = _nombre.isNotEmpty ? _nombre : email.split('@').first;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color.fromRGBO(107, 78, 255, 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color.fromRGBO(107, 78, 255, 0.3)),
+        ),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: _subiendoAvatar ? null : _cambiarFoto,
+              child: _avatarCircle(46),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                  GestureDetector(
+                    onTap: _subiendoAvatar ? null : _cambiarFoto,
+                    child: Text(_subiendoAvatar ? 'Subiendo...' : 'Cambiar foto',
+                        style: const TextStyle(
+                            color: PlatTheme.softBlue,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _avatarCircle(double size) {
+    if (_subiendoAvatar) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: const Center(
+            child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2.5))),
+      );
+    }
+    if (_avatarUrl.isNotEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24, width: 1.5),
+          image: DecorationImage(
+              image: NetworkImage(_avatarUrl), fit: BoxFit.cover),
+        ),
+      );
+    }
+    final inicial = (_nombre.isNotEmpty
+            ? _nombre
+            : (AuthService.instance.usuarioActual?.email ?? '?'))[0]
+        .toUpperCase();
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+          shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
+      child: Center(
+        child: Text(inicial,
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: size * 0.4)),
+      ),
+    );
+  }
+
+  Future<void> _cambiarFoto() async {
+    final archivo = await elegirArchivo();
+    if (archivo == null) return;
+    setState(() => _subiendoAvatar = true);
+    final url =
+        await PerfilService.instance.subirAvatar(archivo.nombre, archivo.bytes);
+    if (url != null) {
+      await PerfilService.instance.actualizarAvatar(url);
+    }
+    if (!mounted) return;
+    setState(() {
+      _subiendoAvatar = false;
+      if (url != null) _avatarUrl = url;
+    });
+    if (url == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No se pudo subir la foto (¿bucket "adjuntos"?).'),
+        backgroundColor: Color(0xFFDC2626),
+      ));
+    }
   }
 
   Widget _sidebarItem(int i, IconData icon, String label) {
@@ -486,8 +609,9 @@ class _PsicologoShellState extends State<PsicologoShell> {
 
   // ── Tab: Dashboard ───────────────────────────────────────────────────────────
   Widget _dashboardTab() {
-    final nombre =
-        AuthService.instance.usuarioActual?.email?.split('@').first ?? '';
+    final nombre = _nombre.isNotEmpty
+        ? _nombre.split(' ').first
+        : (AuthService.instance.usuarioActual?.email?.split('@').first ?? '');
     return RefreshIndicator(
       onRefresh: _cargar,
       child: ListView(

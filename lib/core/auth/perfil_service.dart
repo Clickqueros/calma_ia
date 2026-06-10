@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase/supabase_config.dart';
 import 'auth_service.dart';
@@ -34,6 +35,30 @@ class PerfilService {
   Future<String> miRol() async {
     final p = await miPerfil();
     return (p?['rol'] as String?) ?? 'patient';
+  }
+
+  // ── Foto de perfil (avatar) ──────────────────────────────────────────────────
+  /// Sube la foto a Storage y devuelve su URL pública (o null).
+  Future<String?> subirAvatar(String nombreArchivo, Uint8List bytes) async {
+    if (_sb == null || _uid == null) return null;
+    try {
+      final ruta = 'avatares/${_uid}_${DateTime.now().millisecondsSinceEpoch}_$nombreArchivo';
+      await _sb!.storage.from('adjuntos').uploadBinary(ruta, bytes,
+          fileOptions: const FileOptions(upsert: true));
+      return _sb!.storage.from('adjuntos').getPublicUrl(ruta);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> actualizarAvatar(String url) async {
+    if (_sb == null || _uid == null) return 'No hay sesión.';
+    try {
+      await _sb!.from('profiles').update({'avatar_url': url}).eq('id', _uid!);
+      return null;
+    } catch (e) {
+      return 'Error: $e';
+    }
   }
 
   // ── Vincular paciente con su psicólogo (por correo) ─────────────────────────
