@@ -6,6 +6,7 @@ import '../../core/auth/auth_screen.dart';
 import '../../core/auth/perfil_service.dart';
 import '../../core/citas/citas_service.dart';
 import '../../plataforma/screens/diario/models/nota_model.dart';
+import 'historia_clinica_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Portal del psicólogo. Gate de login + panel real con datos de Supabase.
@@ -1093,6 +1094,20 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(widget.paciente.nombre,
             style: const TextStyle(color: Colors.white, fontSize: 16)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) =>
+                      HistoriaClinicaScreen(paciente: widget.paciente))),
+              icon: const Icon(Icons.folder_shared_rounded,
+                  color: Colors.white, size: 18),
+              label: const Text('Historia clínica',
+                  style: TextStyle(color: Colors.white, fontSize: 13)),
+            ),
+          ),
+        ],
       ),
       body: _cargando
           ? const Center(
