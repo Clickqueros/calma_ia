@@ -455,26 +455,37 @@ class _ReagendarSheetState extends State<_ReagendarSheet> {
                   runSpacing: 10,
                   children: _horas.map((h) {
                     final sel = _hora == h;
+                    final paso = horaYaPaso(_fecha, h);
                     return GestureDetector(
-                      onTap: () => setState(() => _hora = h),
+                      onTap: paso ? null : () => setState(() => _hora = h),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 11),
                         decoration: BoxDecoration(
-                          color: sel ? PlatTheme.purple : Colors.white,
+                          color: paso
+                              ? const Color(0xFFF1F0F5)
+                              : (sel ? PlatTheme.purple : Colors.white),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                              color: sel
-                                  ? PlatTheme.purple
-                                  : const Color(0xFFE8E4FF)),
+                              color: paso
+                                  ? const Color(0xFFE8E4FF)
+                                  : (sel
+                                      ? PlatTheme.purple
+                                      : const Color(0xFFE8E4FF))),
                         ),
                         child: Text(h,
                             style: TextStyle(
-                                color:
-                                    sel ? Colors.white : PlatTheme.textDark,
+                                color: paso
+                                    ? const Color(0xFFB0B0C0)
+                                    : (sel
+                                        ? Colors.white
+                                        : PlatTheme.textDark),
                                 fontSize: 13.5,
                                 fontWeight:
-                                    sel ? FontWeight.w700 : FontWeight.w500)),
+                                    sel ? FontWeight.w700 : FontWeight.w500,
+                                decoration: paso
+                                    ? TextDecoration.lineThrough
+                                    : null)),
                       ),
                     );
                   }).toList(),
@@ -497,18 +508,24 @@ class _ReagendarSheetState extends State<_ReagendarSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(
-                        (fecha: _fecha, hora: _hora, modalidad: _modalidad)),
+                    onPressed: horaYaPaso(_fecha, _hora)
+                        ? null
+                        : () => Navigator.of(context).pop(
+                            (fecha: _fecha, hora: _hora, modalidad: _modalidad)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: PlatTheme.purple,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFFD4CAFF),
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: const Text('Guardar cambios',
-                        style: TextStyle(
+                    child: Text(
+                        horaYaPaso(_fecha, _hora)
+                            ? 'Esa hora ya pasó'
+                            : 'Guardar cambios',
+                        style: const TextStyle(
                             fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                 ),

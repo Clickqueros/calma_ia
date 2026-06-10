@@ -2,6 +2,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase/supabase_config.dart';
 import '../auth/auth_service.dart';
 
+/// ¿El slot (día + hora tipo "8:00 AM") ya pasó respecto a ahora?
+bool horaYaPaso(DateTime dia, String hora) {
+  final dt = slotDateTime(dia, hora);
+  return dt != null && dt.isBefore(DateTime.now());
+}
+
+/// Convierte un día + hora ("8:00 AM" / "2:00 PM") a DateTime.
+DateTime? slotDateTime(DateTime dia, String hora) {
+  final parts = hora.trim().split(' ');
+  if (parts.length != 2) return null;
+  final hm = parts[0].split(':');
+  if (hm.length != 2) return null;
+  var h = int.tryParse(hm[0]) ?? 0;
+  final m = int.tryParse(hm[1]) ?? 0;
+  final pm = parts[1].toUpperCase() == 'PM';
+  if (pm && h != 12) h += 12;
+  if (!pm && h == 12) h = 0;
+  return DateTime(dia.year, dia.month, dia.day, h, m);
+}
+
 class CitaReal {
   final String id;
   final String pacienteId;

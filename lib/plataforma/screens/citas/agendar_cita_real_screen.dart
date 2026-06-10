@@ -58,7 +58,11 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
   }
 
   bool get _puedeAgendar =>
-      _fecha != null && _hora != null && !_guardando && !_ocupada(_fecha!, _hora!);
+      _fecha != null &&
+      _hora != null &&
+      !_guardando &&
+      !_ocupada(_fecha!, _hora!) &&
+      !horaYaPaso(_fecha!, _hora!);
 
   Future<void> _agendar() async {
     if (_psicologoId == null) return;
@@ -194,8 +198,11 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
               return GestureDetector(
                 onTap: () => setState(() {
                   _fecha = d;
-                  // Si la hora elegida ya está ocupada ese día, deselecciónala.
-                  if (_hora != null && _ocupada(d, _hora!)) _hora = null;
+                  // Deselecciona la hora si queda ocupada o ya pasó ese día.
+                  if (_hora != null &&
+                      (_ocupada(d, _hora!) || horaYaPaso(d, _hora!))) {
+                    _hora = null;
+                  }
                 }),
                 child: Container(
                   width: 64,
@@ -240,9 +247,10 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
           runSpacing: 10,
           children: _horas.map((h) {
             final sel = _hora == h;
-            final ocupada = _fecha != null && _ocupada(_fecha!, h);
+            final ocupada = _fecha != null &&
+                (_ocupada(_fecha!, h) || horaYaPaso(_fecha!, h));
             return GestureDetector(
-              // Si está ocupada, no se puede seleccionar.
+              // Si está ocupada o ya pasó, no se puede seleccionar.
               onTap: ocupada ? null : () => setState(() => _hora = h),
               child: Container(
                 padding:
@@ -282,15 +290,19 @@ class _AgendarCitaRealScreenState extends State<AgendarCitaRealScreen> {
           }).toList(),
         ),
         if (_fecha != null &&
-            _horas.where((h) => _ocupada(_fecha!, h)).isNotEmpty) ...[
+            _horas
+                .where((h) => _ocupada(_fecha!, h) || horaYaPaso(_fecha!, h))
+                .isNotEmpty) ...[
           const SizedBox(height: 8),
           const Row(
             children: [
               Icon(Icons.info_outline_rounded,
                   size: 14, color: PlatTheme.textGray),
               SizedBox(width: 6),
-              Text('Las horas en gris ya las tienes agendadas.',
-                  style: TextStyle(color: PlatTheme.textGray, fontSize: 12)),
+              Expanded(
+                child: Text('Las horas en gris ya pasaron o ya las tienes agendadas.',
+                    style: TextStyle(color: PlatTheme.textGray, fontSize: 12)),
+              ),
             ],
           ),
         ],
