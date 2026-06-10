@@ -14,6 +14,7 @@ class PerfilAdmin {
   final String registroProfesional;
   final String tarjetaUrl;
   final bool activo;
+  final String creadoEn;
 
   const PerfilAdmin({
     required this.id,
@@ -26,6 +27,7 @@ class PerfilAdmin {
     this.registroProfesional = '',
     this.tarjetaUrl = '',
     this.activo = true,
+    this.creadoEn = '',
   });
 }
 
@@ -42,7 +44,7 @@ class PerfilAdminService {
     if (_sb == null) return [];
     try {
       final rows = await _sb!.from('profiles').select(
-          'id, nombre, email, rol, psicologo_id, telefono, documento, registro_profesional, tarjeta_url, activo');
+          'id, nombre, email, rol, psicologo_id, telefono, documento, registro_profesional, tarjeta_url, activo, creado_en');
       return (rows as List)
           .map((r) => PerfilAdmin(
                 id: r['id'].toString(),
@@ -57,6 +59,7 @@ class PerfilAdminService {
                 registroProfesional: r['registro_profesional'] ?? '',
                 tarjetaUrl: r['tarjeta_url'] ?? '',
                 activo: r['activo'] ?? true,
+                creadoEn: r['creado_en']?.toString() ?? '',
               ))
           .toList();
     } catch (_) {
