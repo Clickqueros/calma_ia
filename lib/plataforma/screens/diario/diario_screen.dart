@@ -187,16 +187,6 @@ class _DiarioScreenState extends State<DiarioScreen> {
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: () async {
-                    await AuthService.instance.cerrarSesion();
-                  },
-                  child: const Text('Cerrar sesión',
-                      style: TextStyle(
-                          color: Color(0xFF059669),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700)),
-                ),
               ],
             ),
             const SizedBox(height: 12),

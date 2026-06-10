@@ -7,6 +7,7 @@ import 'diario/diario_screen.dart';
 import 'citas/citas_screen.dart';
 import 'citas/mis_citas_paciente_screen.dart';
 import '../../core/supabase/supabase_config.dart';
+import '../../core/auth/auth_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -81,6 +82,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       actions: [
+        if (SupabaseConfig.isConfigured && AuthService.instance.haySesion)
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout_rounded,
+                color: Color(0xFFFF8A8A), size: 22),
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              await AuthService.instance.cerrarSesion();
+              nav.maybePop();
+            },
+          ),
         Container(
           margin: const EdgeInsets.only(right: 16),
           width: 34,
@@ -179,9 +191,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
               .map((e) => _navItem(e.key, e.value.$1, e.value.$2)),
           const Spacer(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
             child: _navItem(99, Icons.settings_rounded, 'Configuración'),
           ),
+          if (SupabaseConfig.isConfigured && AuthService.instance.haySesion)
+            GestureDetector(
+              onTap: () async {
+                final nav = Navigator.of(context);
+                await AuthService.instance.cerrarSesion();
+                nav.maybePop();
+              },
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(28, 8, 24, 22),
+                child: const Row(
+                  children: [
+                    Icon(Icons.logout_rounded, color: Color(0xFFFF8A8A), size: 20),
+                    SizedBox(width: 12),
+                    Text('Cerrar sesión',
+                        style: TextStyle(
+                            color: Color(0xFFFF8A8A),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
