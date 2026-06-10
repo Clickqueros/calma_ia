@@ -204,14 +204,16 @@ class _CitasAdminScreenState extends State<CitasAdminScreen> {
           const SizedBox(height: 12),
           Container(height: 1, color: const Color(0xFFF2F0FF)),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _btn('Reagendar', Icons.edit_calendar_rounded,
                   const Color(0xFF6B4EFF), () => _reagendar(c)),
-              const SizedBox(width: 8),
+              _btn('Cambiar psicólogo', Icons.swap_horiz_rounded,
+                  const Color(0xFF0891B2), () => _cambiarPsicologo(c)),
               _btn('Cambiar estado', Icons.flag_rounded,
                   const Color(0xFFD97706), () => _cambiarEstado(c)),
-              const Spacer(),
               _btn('Eliminar', Icons.delete_outline_rounded,
                   const Color(0xFFDC2626), () => _eliminar(c),
                   outline: true),
@@ -269,6 +271,54 @@ class _CitasAdminScreenState extends State<CitasAdminScreen> {
     if (err == null) {
       _cargar();
       _toast('Cita reagendada ✓', ok: true);
+    } else {
+      _toast(err);
+    }
+  }
+
+  // ── Cambiar psicólogo ────────────────────────────────────────────────────────
+  Future<void> _cambiarPsicologo(CitaReal c) async {
+    if (_psicologos.isEmpty) {
+      _toast('No hay psicólogos registrados.');
+      return;
+    }
+    final nuevo = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 14),
+            const Text('Reasignar a otro psicólogo',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ..._psicologos.entries.map((e) => ListTile(
+                  leading: const CircleAvatar(
+                      backgroundColor: PlatTheme.purple,
+                      child: Icon(Icons.medical_services_rounded,
+                          color: Colors.white, size: 18)),
+                  title: Text(e.value),
+                  trailing: c.psicologoId == e.key
+                      ? const Icon(Icons.check_circle_rounded,
+                          color: Color(0xFF059669))
+                      : null,
+                  onTap: () => Navigator.of(ctx).pop(e.key),
+                )),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+    if (nuevo == null || nuevo == c.psicologoId) return;
+    final err = await PerfilAdminService.instance
+        .actualizarCita(c.id, psicologoId: nuevo);
+    if (!mounted) return;
+    if (err == null) {
+      _cargar();
+      _toast('Psicólogo de la cita actualizado ✓', ok: true);
     } else {
       _toast(err);
     }

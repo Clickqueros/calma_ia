@@ -205,13 +205,14 @@ class PerfilAdminService {
     }
   }
 
-  /// Editar / reagendar una cita (fecha, hora, modalidad, estado).
+  /// Editar / reagendar una cita (fecha, hora, modalidad, estado, psicólogo).
   Future<String?> actualizarCita(
     String id, {
     DateTime? fecha,
     String? hora,
     String? modalidad,
     String? estado,
+    String? psicologoId,
   }) async {
     if (_sb == null) return 'Backend no configurado.';
     try {
@@ -223,6 +224,7 @@ class PerfilAdminService {
       if (hora != null) data['hora'] = hora;
       if (modalidad != null) data['modalidad'] = modalidad;
       if (estado != null) data['estado'] = estado;
+      if (psicologoId != null) data['psicologo_id'] = psicologoId;
       await _sb!.from('appointments').update(data).eq('id', id);
       return null;
     } catch (e) {
