@@ -500,7 +500,8 @@ class _PsicologoShellState extends State<PsicologoShell> {
     try {
       final url = await PerfilService.instance
           .subirAvatar(archivo.nombre, archivo.bytes);
-      await PerfilService.instance.actualizarAvatar(url);
+      final err = await PerfilService.instance.actualizarAvatar(url);
+      if (err != null) throw err; // si no se guardó en la BD, avisar
       if (!mounted) return;
       setState(() {
         _subiendoAvatar = false;
