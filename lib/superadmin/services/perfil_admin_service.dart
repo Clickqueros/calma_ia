@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/supabase/supabase_config.dart';
+import '../../core/citas/citas_service.dart';
 
 /// Perfil visto desde la administración (datos NO clínicos).
 class PerfilAdmin {
@@ -179,6 +180,30 @@ class PerfilAdminService {
 
   Future<String?> eliminar(String userId) =>
       _invocarAdmin({'accion': 'eliminar', 'userId': userId});
+
+  // ── Citas (solo admin) ───────────────────────────────────────────────────────
+  Future<List<CitaReal>> listarCitas() async {
+    if (_sb == null) return [];
+    try {
+      final rows = await _sb!
+          .from('appointments')
+          .select()
+          .order('fecha', ascending: false);
+      return (rows as List).map((r) => CitaReal.fromRow(r)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<String?> eliminarCita(String id) async {
+    if (_sb == null) return 'Backend no configurado.';
+    try {
+      await _sb!.from('appointments').delete().eq('id', id);
+      return null;
+    } catch (e) {
+      return 'Error al eliminar la cita: $e';
+    }
+  }
 
   // ── Asignación paciente ↔ psicólogo ──────────────────────────────────────────
   Future<String?> asignar(String pacienteId, String? psicologoId) async {

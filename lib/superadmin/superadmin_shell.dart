@@ -6,6 +6,7 @@ import 'audit/audit_screen.dart';
 import 'access_requests/access_requests_screen.dart';
 import 'asignaciones/asignaciones_screen.dart';
 import 'psychologists/gestion_psicologos_screen.dart';
+import 'appointments/citas_admin_screen.dart';
 import 'widgets/status_badge.dart';
 import '../core/auth/auth_service.dart';
 import '../core/supabase/supabase_config.dart';
@@ -66,6 +67,7 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
         0 => const SuperAdminDashboardScreen(),
         1 => const GestionPsicologosScreen(),
         2 => const PatientsAdminScreen(),
+        4 => const CitasAdminScreen(),
         13 => const AsignacionesScreen(),
         9 => const AuditScreen(),
         11 => const AccessRequestsScreen(),
