@@ -497,20 +497,22 @@ class _PsicologoShellState extends State<PsicologoShell> {
     final archivo = await elegirArchivo();
     if (archivo == null) return;
     setState(() => _subiendoAvatar = true);
-    final url =
-        await PerfilService.instance.subirAvatar(archivo.nombre, archivo.bytes);
-    if (url != null) {
+    try {
+      final url = await PerfilService.instance
+          .subirAvatar(archivo.nombre, archivo.bytes);
       await PerfilService.instance.actualizarAvatar(url);
-    }
-    if (!mounted) return;
-    setState(() {
-      _subiendoAvatar = false;
-      if (url != null) _avatarUrl = url;
-    });
-    if (url == null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No se pudo subir la foto (¿bucket "adjuntos"?).'),
-        backgroundColor: Color(0xFFDC2626),
+      if (!mounted) return;
+      setState(() {
+        _subiendoAvatar = false;
+        _avatarUrl = url;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _subiendoAvatar = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error al subir: $e'),
+        backgroundColor: const Color(0xFFDC2626),
+        duration: const Duration(seconds: 6),
       ));
     }
   }

@@ -38,17 +38,15 @@ class PerfilService {
   }
 
   // ── Foto de perfil (avatar) ──────────────────────────────────────────────────
-  /// Sube la foto a Storage y devuelve su URL pública (o null).
-  Future<String?> subirAvatar(String nombreArchivo, Uint8List bytes) async {
-    if (_sb == null || _uid == null) return null;
-    try {
-      final ruta = 'avatares/${_uid}_${DateTime.now().millisecondsSinceEpoch}_$nombreArchivo';
-      await _sb!.storage.from('adjuntos').uploadBinary(ruta, bytes,
-          fileOptions: const FileOptions(upsert: true));
-      return _sb!.storage.from('adjuntos').getPublicUrl(ruta);
-    } catch (_) {
-      return null;
-    }
+  /// Sube la foto a Storage y devuelve su URL pública. Lanza excepción si falla
+  /// (para poder mostrar el mensaje real de Supabase).
+  Future<String> subirAvatar(String nombreArchivo, Uint8List bytes) async {
+    if (_sb == null || _uid == null) throw 'No hay sesión / backend.';
+    final ruta =
+        'avatares/${_uid}_${DateTime.now().millisecondsSinceEpoch}_$nombreArchivo';
+    await _sb!.storage.from('adjuntos').uploadBinary(ruta, bytes,
+        fileOptions: const FileOptions(upsert: true));
+    return _sb!.storage.from('adjuntos').getPublicUrl(ruta);
   }
 
   Future<String?> actualizarAvatar(String url) async {
