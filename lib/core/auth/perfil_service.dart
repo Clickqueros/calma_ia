@@ -95,7 +95,7 @@ class PerfilService {
     try {
       return await _sb!
           .from('profiles')
-          .select('nombre, email')
+          .select('nombre, email, avatar_url')
           .eq('id', pid)
           .maybeSingle();
     } catch (_) {

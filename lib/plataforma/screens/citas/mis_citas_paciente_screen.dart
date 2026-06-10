@@ -121,6 +121,7 @@ class _MisCitasPacienteScreenState extends State<MisCitasPacienteScreen> {
     final nombre = (_psicologo!['nombre'] as String?)?.isNotEmpty == true
         ? _psicologo!['nombre']
         : (_psicologo!['email'] ?? 'Tu psicólogo');
+    final avatar = (_psicologo!['avatar_url'] as String?) ?? '';
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -135,14 +136,7 @@ class _MisCitasPacienteScreenState extends State<MisCitasPacienteScreen> {
         children: [
           Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                    shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
-                child: const Icon(Icons.medical_services_rounded,
-                    color: Colors.white, size: 24),
-              ),
+              _avatarPsicologo(avatar),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -186,6 +180,30 @@ class _MisCitasPacienteScreenState extends State<MisCitasPacienteScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _avatarPsicologo(String avatar) {
+    if (avatar.isNotEmpty) {
+      return Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24, width: 1.5),
+          image: DecorationImage(
+              image: NetworkImage(avatar), fit: BoxFit.cover),
+        ),
+      );
+    }
+    // Sin foto → ícono por defecto
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: const BoxDecoration(
+          shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
+      child: const Icon(Icons.medical_services_rounded,
+          color: Colors.white, size: 24),
     );
   }
 
