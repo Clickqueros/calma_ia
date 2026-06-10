@@ -5,6 +5,7 @@ import 'auth_service.dart';
 import 'auth_screen.dart';
 import 'perfil_service.dart';
 import '../../plataforma/screens/bienvenida_screen.dart';
+import '../../plataforma/screens/dashboard_screen.dart';
 
 /// Puerta de entrada del paciente.
 /// - Sin backend → entra directo (modo demo de respaldo).
@@ -67,7 +68,8 @@ class _PacienteGateState extends State<PacienteGate> {
       return _OtroRol(rol: _rol);
     }
 
-    return const BienvenidaScreen();
+    // Paciente con sesión → directo al dashboard (no a la bienvenida).
+    return const DashboardScreen();
   }
 }
 

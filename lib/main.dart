@@ -5,6 +5,7 @@ import 'core/supabase/supabase_config.dart';
 import 'screens/landing_page.dart';
 import 'superadmin/superadmin_gate.dart';
 import 'admin/real/psicologo_portal.dart';
+import 'core/auth/paciente_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,11 @@ class CalmaApp extends StatelessWidget {
           case '/psicologos':
           case '/psicologo':
             destino = const PsicologoPortal();
+            break;
+          case '/usuario':
+          case '/paciente':
+          case '/app':
+            destino = const PacienteGate();
             break;
           default:
             destino = const LandingPage();

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/auth/paciente_gate.dart';
 import '../superadmin/superadmin_gate.dart';
 
 class LandingPage extends StatefulWidget {
@@ -67,9 +66,7 @@ class _LandingPageState extends State<LandingPage> {
             const SizedBox(width: 40),
           ],
           ElevatedButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PacienteGate()),
-            ),
+            onPressed: () => Navigator.of(context).pushNamed('/usuario'),
             style: ElevatedButton.styleFrom(
               backgroundColor: _purple,
               foregroundColor: Colors.white,
@@ -153,9 +150,7 @@ class _LandingPageState extends State<LandingPage> {
           runSpacing: 12,
           children: [
             ElevatedButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const PacienteGate()),
-              ),
+              onPressed: () => Navigator.of(context).pushNamed('/usuario'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _purple,
                 foregroundColor: Colors.white,
@@ -954,9 +949,7 @@ class _LandingPageState extends State<LandingPage> {
           ),
           const SizedBox(height: 40),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PacienteGate()),
-            ),
+            onPressed: () => Navigator.of(context).pushNamed('/usuario'),
             style: ElevatedButton.styleFrom(
               backgroundColor: _purple,
               foregroundColor: Colors.white,
