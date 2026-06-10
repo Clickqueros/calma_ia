@@ -2,27 +2,94 @@ import 'package:flutter/material.dart';
 import '../../plataforma/theme/plat_theme.dart';
 import '../../core/roles/user_role.dart';
 import '../../core/access/clinical_data_guard.dart';
-import '../data/superadmin_demo_data.dart';
+import '../../core/supabase/supabase_config.dart';
+import '../services/perfil_admin_service.dart';
 import '../widgets/status_badge.dart';
 
-class PatientsAdminScreen extends StatelessWidget {
+/// Pacientes reales (vista administrativa, datos NO clínicos).
+class PatientsAdminScreen extends StatefulWidget {
   const PatientsAdminScreen({super.key});
 
-  bool _small(BuildContext c) => MediaQuery.of(c).size.width < 900;
+  @override
+  State<PatientsAdminScreen> createState() => _PatientsAdminScreenState();
+}
+
+class _PatientsAdminScreenState extends State<PatientsAdminScreen> {
+  List<PerfilAdmin> _pacientes = [];
+  Map<String, String> _psicologos = {}; // id -> nombre
+  bool _cargando = true;
+
+  bool get _small => MediaQuery.of(context).size.width < 900;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    setState(() => _cargando = true);
+    final todos = await PerfilAdminService.instance.listarTodos();
+    if (mounted) {
+      setState(() {
+        _pacientes = todos.where((p) => p.rol == 'patient').toList();
+        _psicologos = {
+          for (final p in todos.where((p) => p.rol == 'psychologist'))
+            p.id: p.nombre
+        };
+        _cargando = false;
+      });
+    }
+  }
+
+  String _nombrePsico(String? id) {
+    if (id == null) return 'Sin asignar';
+    return _psicologos[id] ?? 'Psicólogo';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final small = _small(context);
-    final pad = small ? 18.0 : 32.0;
-
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(pad),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    if (!SupabaseConfig.isConfigured) {
+      return const EmptyState(
+          icono: Icons.cloud_off_rounded,
+          titulo: 'Backend no configurado',
+          subtitulo: 'Conecta Supabase para ver pacientes reales.');
+    }
+    if (_cargando) {
+      return const Center(
+          child: CircularProgressIndicator(color: PlatTheme.purple));
+    }
+    final pad = _small ? 18.0 : 32.0;
+    return RefreshIndicator(
+      onRefresh: _cargar,
+      child: ListView(
+        padding: EdgeInsets.all(pad),
         children: [
           _bannerPrivacidad(),
-          const SizedBox(height: 20),
-          ...pacientesAdmin.map((p) => _pacienteCard(context, p, small)),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Text('${_pacientes.length} pacientes registrados',
+                  style: const TextStyle(
+                      color: PlatTheme.textDark,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded,
+                    color: PlatTheme.textGray, size: 20),
+                onPressed: _cargar,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_pacientes.isEmpty)
+            const EmptyState(
+                icono: Icons.people_outline_rounded,
+                titulo: 'Aún no hay pacientes',
+                subtitulo: 'Aparecerán aquí cuando se registren en la app.')
+          else
+            ..._pacientes.map(_pacienteCard),
         ],
       ),
     );
@@ -43,7 +110,7 @@ class PatientsAdminScreen extends StatelessWidget {
           Expanded(
             child: Text(
                 'Vista administrativa. Solo datos de cuenta. La información clínica '
-                '(historia, diario, evolución) está protegida y requiere autorización.',
+                '(historia, diario) está protegida y requiere autorización.',
                 style: TextStyle(
                     color: Color(0xFF4C1D95), fontSize: 12.5, height: 1.4)),
           ),
@@ -52,7 +119,8 @@ class PatientsAdminScreen extends StatelessWidget {
     );
   }
 
-  Widget _pacienteCard(BuildContext context, PacienteAdmin p, bool small) {
+  Widget _pacienteCard(PerfilAdmin p) {
+    final asignado = p.psicologoId != null;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -68,16 +136,15 @@ class PatientsAdminScreen extends StatelessWidget {
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: p.gradiente),
-                ),
+                decoration: const BoxDecoration(
+                    shape: BoxShape.circle, gradient: PlatTheme.purpleGradient),
                 child: Center(
-                  child: Text(p.iniciales,
+                  child: Text(
+                      p.nombre.isNotEmpty ? p.nombre[0].toUpperCase() : '?',
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 15)),
+                          fontSize: 16)),
                 ),
               ),
               const SizedBox(width: 14),
@@ -87,11 +154,14 @@ class PatientsAdminScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(p.nombre,
-                            style: const TextStyle(
-                                color: PlatTheme.textDark,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold)),
+                        Flexible(
+                          child: Text(p.nombre,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: PlatTheme.textDark,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold)),
+                        ),
                         const SizedBox(width: 8),
                         StatusBadge(p.activo
                             ? BadgeStatus.activo
@@ -99,7 +169,7 @@ class PatientsAdminScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text('${p.ref} · ${p.psicologo}',
+                    Text(p.email,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -109,147 +179,68 @@ class PatientsAdminScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Container(height: 1, color: const Color(0xFFF2F0FF)),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 18,
-            runSpacing: 10,
-            children: [
-              _flag(p.tieneConsentimiento, 'Consentimiento'),
-              _flag(p.tieneCitasActivas, 'Citas activas'),
-              _dato(Icons.calendar_today_rounded, 'Registro: ${p.registro}'),
-            ],
-          ),
-          const SizedBox(height: 14),
           Row(
             children: [
-              _accion(context, p.activo ? 'Desactivar' : 'Activar',
-                  Icons.toggle_on_rounded),
-              const SizedBox(width: 8),
-              _accion(context, 'Soporte', Icons.support_agent_rounded),
-              const Spacer(),
-              // ← ACCIÓN CLAVE: intentar ver historia clínica dispara el bloqueo
-              _accionClinica(context, p),
+              Icon(asignado ? Icons.link_rounded : Icons.link_off_rounded,
+                  size: 14,
+                  color: asignado
+                      ? const Color(0xFF059669)
+                      : PlatTheme.textGray),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('Psicólogo: ${_nombrePsico(p.psicologoId)}',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: asignado
+                            ? const Color(0xFF059669)
+                            : PlatTheme.textGray,
+                        fontSize: 12.5)),
+              ),
+              // Acción que demuestra la protección de datos clínicos
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ClinicalDataGuard(
+                    modulo: SensitiveModule.clinicalHistory,
+                    pacienteRef: p.email,
+                    pacienteId: p.id,
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(
+                          backgroundColor: PlatTheme.darkNavy,
+                          title: const Text('Historia clínica',
+                              style: TextStyle(color: Colors.white))),
+                      body: const Center(child: Text('Acceso autorizado')),
+                    ),
+                  ),
+                )),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFCD9A8)),
+                    color: const Color(0xFFFFF7ED),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.lock_rounded,
+                          size: 13, color: Color(0xFFD97706)),
+                      SizedBox(width: 5),
+                      Text('Historia clínica',
+                          style: TextStyle(
+                              color: Color(0xFFD97706),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  /// Botón que intenta abrir información clínica → ClinicalDataGuard la bloquea.
-  Widget _accionClinica(BuildContext context, PacienteAdmin p) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ClinicalDataGuard(
-            modulo: SensitiveModule.clinicalHistory,
-            pacienteRef: p.ref,
-            pacienteId: p.id,
-            // Este builder SOLO se ejecuta si hay autorización vigente.
-            builder: (_) => _historiaPlaceholder(p),
-          ),
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: const Color(0xFFFCD9A8)),
-          color: const Color(0xFFFFF7ED),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.lock_rounded, size: 14, color: Color(0xFFD97706)),
-            SizedBox(width: 6),
-            Text('Ver historia clínica',
-                style: TextStyle(
-                    color: Color(0xFFD97706),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Solo se ve si hay AccessGrant vigente (en el demo: tras aprobar la solicitud).
-  Widget _historiaPlaceholder(PacienteAdmin p) {
-    return Scaffold(
-      backgroundColor: PlatTheme.softBg,
-      appBar: AppBar(
-        backgroundColor: PlatTheme.darkNavy,
-        title: Text('Historia clínica · ${p.ref}',
-            style: const TextStyle(color: Colors.white, fontSize: 16)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-              'Acceso autorizado temporalmente. Este contenido se mostraría aquí '
-              'bajo el AccessGrant vigente. Todo acceso queda registrado en auditoría.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: PlatTheme.textGray, fontSize: 14, height: 1.5)),
-        ),
-      ),
-    );
-  }
-
-  Widget _flag(bool ok, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(ok ? Icons.check_circle_rounded : Icons.cancel_rounded,
-            size: 15,
-            color: ok ? const Color(0xFF059669) : const Color(0xFFDC2626)),
-        const SizedBox(width: 5),
-        Text(label,
-            style: const TextStyle(color: PlatTheme.textGray, fontSize: 12.5)),
-      ],
-    );
-  }
-
-  Widget _dato(IconData icon, String txt) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: PlatTheme.textGray),
-        const SizedBox(width: 5),
-        Text(txt,
-            style: const TextStyle(color: PlatTheme.textGray, fontSize: 12.5)),
-      ],
-    );
-  }
-
-  Widget _accion(BuildContext context, String label, IconData icon) {
-    return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('$label (demo)'),
-        backgroundColor: PlatTheme.darkNavy,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      )),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: const Color(0xFFE8E4FF)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: PlatTheme.textGray),
-            const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                    color: PlatTheme.textGray,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
       ),
     );
   }
