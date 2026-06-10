@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/supabase/supabase_config.dart';
 
@@ -8,6 +9,11 @@ class PerfilAdmin {
   final String email;
   final String rol;
   final String? psicologoId;
+  final String telefono;
+  final String documento;
+  final String registroProfesional;
+  final String tarjetaUrl;
+  final bool activo;
 
   const PerfilAdmin({
     required this.id,
@@ -15,10 +21,15 @@ class PerfilAdmin {
     required this.email,
     required this.rol,
     required this.psicologoId,
+    this.telefono = '',
+    this.documento = '',
+    this.registroProfesional = '',
+    this.tarjetaUrl = '',
+    this.activo = true,
   });
 }
 
-/// Servicio del SuperAdmin para gestionar relaciones administrativas.
+/// Servicio del SuperAdmin para gestionar usuarios y relaciones administrativas.
 /// NO accede a datos clínicos (diario, historia, notas).
 class PerfilAdminService {
   PerfilAdminService._();
@@ -30,9 +41,8 @@ class PerfilAdminService {
   Future<List<PerfilAdmin>> listarTodos() async {
     if (_sb == null) return [];
     try {
-      final rows = await _sb!
-          .from('profiles')
-          .select('id, nombre, email, rol, psicologo_id');
+      final rows = await _sb!.from('profiles').select(
+          'id, nombre, email, rol, psicologo_id, telefono, documento, registro_profesional, tarjeta_url, activo');
       return (rows as List)
           .map((r) => PerfilAdmin(
                 id: r['id'].toString(),
@@ -42,6 +52,11 @@ class PerfilAdminService {
                 email: r['email'] ?? '',
                 rol: r['rol'] ?? 'patient',
                 psicologoId: r['psicologo_id']?.toString(),
+                telefono: r['telefono'] ?? '',
+                documento: r['documento'] ?? '',
+                registroProfesional: r['registro_profesional'] ?? '',
+                tarjetaUrl: r['tarjeta_url'] ?? '',
+                activo: r['activo'] ?? true,
               ))
           .toList();
     } catch (_) {
@@ -55,12 +70,28 @@ class PerfilAdminService {
   Future<List<PerfilAdmin>> psicologos() async =>
       (await listarTodos()).where((p) => p.rol == 'psychologist').toList();
 
-  /// Crea una cuenta de psicólogo (solo el admin puede hacerlo).
-  /// Usa un cliente Supabase temporal para NO cerrar la sesión del admin.
-  Future<String?> registrarPsicologo({
+  // ── Subir tarjeta profesional a Storage ──────────────────────────────────────
+  Future<String?> subirTarjeta(String nombreArchivo, Uint8List bytes) async {
+    if (_sb == null) return null;
+    try {
+      final ruta = 'tarjetas/${DateTime.now().millisecondsSinceEpoch}_$nombreArchivo';
+      await _sb!.storage.from('adjuntos').uploadBinary(ruta, bytes,
+          fileOptions: const FileOptions(upsert: true));
+      return _sb!.storage.from('adjuntos').getPublicUrl(ruta);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ── Crear psicólogo (con datos básicos + tarjeta) ────────────────────────────
+  Future<String?> crearPsicologo({
     required String nombre,
     required String email,
     required String password,
+    String telefono = '',
+    String documento = '',
+    String registroProfesional = '',
+    String tarjetaUrl = '',
   }) async {
     if (!SupabaseConfig.isConfigured) return 'Backend no configurado.';
     if (password.length < 6) {
@@ -69,23 +100,28 @@ class PerfilAdminService {
     SupabaseClient? temp;
     try {
       temp = SupabaseClient(
-        SupabaseConfig.supabaseUrl,
-        SupabaseConfig.supabaseAnonKey,
-      );
+          SupabaseConfig.supabaseUrl, SupabaseConfig.supabaseAnonKey);
       final res = await temp.auth.signUp(
         email: email.trim(),
         password: password,
         data: {'nombre': nombre.trim(), 'rol': 'psychologist'},
       );
-      if (res.user == null) {
+      final uid = res.user?.id;
+      if (uid == null) {
         return 'No se pudo crear. ¿La confirmación de correo está activa? '
             'Desactívala en Supabase para crear cuentas al instante.';
       }
-      return null; // éxito
+      // Completar datos básicos en el perfil (con la sesión del admin)
+      await _sb!.from('profiles').update({
+        'telefono': telefono.trim(),
+        'documento': documento.trim(),
+        'registro_profesional': registroProfesional.trim(),
+        'tarjeta_url': tarjetaUrl,
+      }).eq('id', uid);
+      return null;
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains('already registered') ||
-          msg.contains('User already')) {
+      if (msg.contains('already registered') || msg.contains('User already')) {
         return 'Ya existe una cuenta con ese correo.';
       }
       return 'Error al crear psicólogo: $e';
@@ -94,7 +130,75 @@ class PerfilAdminService {
     }
   }
 
-  /// Asigna (o reasigna) un paciente a un psicólogo.
+  // ── Editar datos básicos (no email/contraseña) ───────────────────────────────
+  Future<String?> actualizarDatos(
+    String userId, {
+    required String nombre,
+    String telefono = '',
+    String documento = '',
+    String registroProfesional = '',
+    String? tarjetaUrl,
+  }) async {
+    if (_sb == null) return 'Backend no configurado.';
+    try {
+      final data = <String, dynamic>{
+        'nombre': nombre.trim(),
+        'telefono': telefono.trim(),
+        'documento': documento.trim(),
+        'registro_profesional': registroProfesional.trim(),
+      };
+      if (tarjetaUrl != null) data['tarjeta_url'] = tarjetaUrl;
+      await _sb!.from('profiles').update(data).eq('id', userId);
+      return null;
+    } catch (e) {
+      return 'Error al actualizar: $e';
+    }
+  }
+
+  // ── Activar / desactivar (no borra la cuenta) ────────────────────────────────
+  Future<String?> setActivo(String userId, bool activo) async {
+    if (_sb == null) return 'Backend no configurado.';
+    try {
+      await _sb!.from('profiles').update({'activo': activo}).eq('id', userId);
+      return null;
+    } catch (e) {
+      return 'Error: $e';
+    }
+  }
+
+  // ── Acciones que requieren la Edge Function (service_role) ───────────────────
+  Future<String?> _invocarAdmin(Map<String, dynamic> body) async {
+    if (_sb == null) return 'Backend no configurado.';
+    try {
+      final res = await _sb!.functions.invoke('admin-psicologos', body: body);
+      if (res.status != 200) {
+        final data = res.data;
+        final msg = (data is Map && data['error'] != null)
+            ? data['error'].toString()
+            : 'Error ${res.status}';
+        return msg;
+      }
+      return null;
+    } catch (e) {
+      return 'Error: $e (¿desplegaste la Edge Function "admin-psicologos"?)';
+    }
+  }
+
+  Future<String?> cambiarEmail(String userId, String nuevoEmail) =>
+      _invocarAdmin({'accion': 'email', 'userId': userId, 'email': nuevoEmail.trim()});
+
+  Future<String?> cambiarPassword(String userId, String nuevaPassword) {
+    if (nuevaPassword.length < 6) {
+      return Future.value('La contraseña debe tener al menos 6 caracteres.');
+    }
+    return _invocarAdmin(
+        {'accion': 'password', 'userId': userId, 'password': nuevaPassword});
+  }
+
+  Future<String?> eliminar(String userId) =>
+      _invocarAdmin({'accion': 'eliminar', 'userId': userId});
+
+  // ── Asignación paciente ↔ psicólogo ──────────────────────────────────────────
   Future<String?> asignar(String pacienteId, String? psicologoId) async {
     if (_sb == null) return 'Backend no configurado.';
     try {
@@ -106,4 +210,12 @@ class PerfilAdminService {
       return 'Error al asignar: $e';
     }
   }
+
+  /// Compatibilidad con el código existente.
+  Future<String?> registrarPsicologo({
+    required String nombre,
+    required String email,
+    required String password,
+  }) =>
+      crearPsicologo(nombre: nombre, email: email, password: password);
 }

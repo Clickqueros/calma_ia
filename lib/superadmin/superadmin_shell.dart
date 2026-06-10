@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../plataforma/theme/plat_theme.dart';
 import 'dashboard/superadmin_dashboard_screen.dart';
-import 'psychologists/psychologists_screen.dart';
 import 'patients/patients_admin_screen.dart';
 import 'audit/audit_screen.dart';
 import 'access_requests/access_requests_screen.dart';
 import 'asignaciones/asignaciones_screen.dart';
+import 'psychologists/gestion_psicologos_screen.dart';
 import 'widgets/status_badge.dart';
 import '../core/auth/auth_service.dart';
 import '../core/supabase/supabase_config.dart';
@@ -64,7 +64,7 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
 
   Widget get _content => switch (_selected) {
         0 => const SuperAdminDashboardScreen(),
-        1 => const PsychologistsScreen(),
+        1 => const GestionPsicologosScreen(),
         2 => const PatientsAdminScreen(),
         13 => const AsignacionesScreen(),
         9 => const AuditScreen(),
