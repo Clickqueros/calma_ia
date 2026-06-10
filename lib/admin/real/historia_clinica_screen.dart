@@ -35,8 +35,15 @@ class _HistoriaClinicaScreenState extends State<HistoriaClinicaScreen> {
   String _diagNombre = '';
 
   List<Evolucion> _evoluciones = [];
+  HistoriaClinica? _historia;
   bool _cargando = true;
   bool _guardando = false;
+  bool _editando = false; // false = vista (tabla), true = formulario
+  bool get _tieneDatos =>
+      _historia != null &&
+      (_historia!.documento.isNotEmpty ||
+          _historia!.motivoConsulta.isNotEmpty ||
+          _historia!.valoracionInicial.isNotEmpty);
 
   @override
   void initState() {
@@ -60,6 +67,9 @@ class _HistoriaClinicaScreenState extends State<HistoriaClinicaScreen> {
     final evo = await HistoriaService.instance.evoluciones(widget.paciente.id);
     if (mounted) {
       setState(() {
+        _historia = h;
+        // Si no hay datos aún, abrir directo en modo edición.
+        _editando = !(_tieneDatos);
         if (h != null) {
           _documento.text = h.documento;
           _fechaNac.text = h.fechaNacimiento;
@@ -86,7 +96,7 @@ class _HistoriaClinicaScreenState extends State<HistoriaClinicaScreen> {
 
   Future<void> _guardar() async {
     setState(() => _guardando = true);
-    final error = await HistoriaService.instance.guardar(HistoriaClinica(
+    final h = HistoriaClinica(
       pacienteId: widget.paciente.id,
       documento: _documento.text.trim(),
       fechaNacimiento: _fechaNac.text.trim(),
@@ -104,9 +114,16 @@ class _HistoriaClinicaScreenState extends State<HistoriaClinicaScreen> {
       diagnosticoCodigo: _diagCodigo,
       diagnosticoNombre: _diagNombre,
       observaciones: _observaciones.text.trim(),
-    ));
+    );
+    final error = await HistoriaService.instance.guardar(h);
     if (!mounted) return;
-    setState(() => _guardando = false);
+    setState(() {
+      _guardando = false;
+      if (error == null) {
+        _historia = h;
+        _editando = false; // volver a modo vista
+      }
+    });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(error ?? 'Historia clínica guardada ✓'),
       backgroundColor:
@@ -124,6 +141,20 @@ class _HistoriaClinicaScreenState extends State<HistoriaClinicaScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Historia clínica',
             style: TextStyle(color: Colors.white, fontSize: 16)),
+        actions: [
+          if (!_cargando)
+            TextButton.icon(
+              onPressed: () => setState(() => _editando = !_editando),
+              icon: Icon(
+                  _editando
+                      ? Icons.visibility_rounded
+                      : Icons.edit_rounded,
+                  color: Colors.white,
+                  size: 18),
+              label: Text(_editando ? 'Ver' : 'Editar',
+                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+            ),
+        ],
       ),
       body: _cargando
           ? const Center(
@@ -131,69 +162,223 @@ class _HistoriaClinicaScreenState extends State<HistoriaClinicaScreen> {
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                _bloque('Datos del paciente', Icons.badge_rounded, [
-                  _campo('Nombre', TextEditingController(text: widget.paciente.nombre),
-                      enabled: false),
-                  _fila([
-                    _campo('Documento (CC)', _documento),
-                    _campo('Fecha de nacimiento', _fechaNac, hint: 'dd/mm/aaaa'),
-                  ]),
-                  _fila([
-                    _dropdown('Sexo', _sexo, sexos, (v) => setState(() => _sexo = v)),
-                    _dropdown('Estado civil', _estadoCivil, estadosCiviles,
-                        (v) => setState(() => _estadoCivil = v)),
-                  ]),
-                  _fila([
-                    _campo('Ciudad', _ciudad),
-                    _campo('Teléfono', _telefono),
-                  ]),
-                  _campo('Dirección', _direccion),
-                  _campo('Ocupación', _ocupacion),
-                  _fila([
-                    _campo('Entidad (EPS)', _entidad),
-                    _dropdown('Tipo de usuario', _tipoUsuario, tiposUsuario,
-                        (v) => setState(() => _tipoUsuario = v)),
-                  ]),
-                ]),
-                const SizedBox(height: 16),
-                _bloque('Valoración inicial', Icons.assignment_rounded, [
-                  _campoMultilinea('Motivo de consulta', _motivo, 3),
-                  _campoMultilinea('Antecedentes', _antecedentes, 3),
-                  _campoMultilinea(
-                      'Valoración inicial (narrativa)', _valoracion, 5),
-                  _labelMini('Diagnóstico (DSM-5 / CIE-10)'),
-                  _selectorDiagnostico(),
-                  _campoMultilinea('Observaciones', _observaciones, 3),
-                ]),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _guardando ? null : _guardar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: PlatTheme.purple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: _guardando
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.5))
-                        : const Text('Guardar historia clínica',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w600)),
-                  ),
-                ),
+                if (_editando) ..._formulario() else ..._vista(),
                 const SizedBox(height: 24),
                 _evolucionSeccion(),
               ],
             ),
     );
+  }
+
+  // ── Modo VISTA (tabla / documento, solo lectura) ────────────────────────────
+  List<Widget> _vista() {
+    final h = _historia;
+    return [
+      _bloqueVista('Datos del paciente', Icons.badge_rounded, [
+        ('Nombre', widget.paciente.nombre),
+        ('Documento (CC)', h?.documento ?? ''),
+        ('Fecha de nacimiento', h?.fechaNacimiento ?? ''),
+        ('Sexo', h?.sexo ?? ''),
+        ('Estado civil', h?.estadoCivil ?? ''),
+        ('Ciudad', h?.ciudad ?? ''),
+        ('Teléfono', h?.telefono ?? ''),
+        ('Dirección', h?.direccion ?? ''),
+        ('Ocupación', h?.ocupacion ?? ''),
+        ('Entidad (EPS)', h?.entidad ?? ''),
+        ('Tipo de usuario', h?.tipoUsuario ?? ''),
+      ]),
+      const SizedBox(height: 16),
+      _bloqueVistaTexto('Valoración inicial', Icons.assignment_rounded, [
+        ('Motivo de consulta', h?.motivoConsulta ?? ''),
+        ('Antecedentes', h?.antecedentes ?? ''),
+        ('Valoración inicial', h?.valoracionInicial ?? ''),
+        if ((h?.diagnosticoCodigo ?? '').isNotEmpty)
+          ('Diagnóstico', '${h?.diagnosticoCodigo} · ${h?.diagnosticoNombre}'),
+        ('Observaciones', h?.observaciones ?? ''),
+      ]),
+    ];
+  }
+
+  Widget _bloqueVista(
+      String titulo, IconData icon, List<(String, String)> filas) {
+    final visibles = filas.where((f) => f.$2.trim().isNotEmpty).toList();
+    return Container(
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEFECFF))),
+      child: Column(
+        children: [
+          _tituloBloque(titulo, icon),
+          if (visibles.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Sin información registrada.',
+                    style: TextStyle(color: PlatTheme.textGray, fontSize: 13)),
+              ),
+            )
+          else
+            ...visibles.asMap().entries.map((e) {
+              final par = e.value;
+              final ultimo = e.key == visibles.length - 1;
+              return Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  border: ultimo
+                      ? null
+                      : const Border(
+                          bottom: BorderSide(color: Color(0xFFF2F0FF))),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 140,
+                      child: Text(par.$1,
+                          style: const TextStyle(
+                              color: PlatTheme.textGray,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(par.$2,
+                          style: const TextStyle(
+                              color: PlatTheme.textDark, fontSize: 13.5)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _bloqueVistaTexto(
+      String titulo, IconData icon, List<(String, String)> bloques) {
+    final visibles = bloques.where((f) => f.$2.trim().isNotEmpty).toList();
+    return Container(
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEFECFF))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _tituloBloque(titulo, icon),
+          if (visibles.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Sin información registrada.',
+                  style: TextStyle(color: PlatTheme.textGray, fontSize: 13)),
+            )
+          else
+            ...visibles.map((b) => Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(b.$1.toUpperCase(),
+                          style: const TextStyle(
+                              color: PlatTheme.purple,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5)),
+                      const SizedBox(height: 4),
+                      Text(b.$2,
+                          style: const TextStyle(
+                              color: PlatTheme.textDark,
+                              fontSize: 13.5,
+                              height: 1.5)),
+                    ],
+                  ),
+                )),
+        ],
+      ),
+    );
+  }
+
+  Widget _tituloBloque(String titulo, IconData icon) => Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Row(
+          children: [
+            Icon(icon, color: PlatTheme.purple, size: 20),
+            const SizedBox(width: 8),
+            Text(titulo,
+                style: const TextStyle(
+                    color: PlatTheme.textDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+
+  // ── Modo FORMULARIO (edición) ───────────────────────────────────────────────
+  List<Widget> _formulario() {
+    return [
+      _bloque('Datos del paciente', Icons.badge_rounded, [
+        _campo('Nombre',
+            TextEditingController(text: widget.paciente.nombre),
+            enabled: false),
+        _fila([
+          _campo('Documento (CC)', _documento),
+          _campo('Fecha de nacimiento', _fechaNac, hint: 'dd/mm/aaaa'),
+        ]),
+        _fila([
+          _dropdown('Sexo', _sexo, sexos, (v) => setState(() => _sexo = v)),
+          _dropdown('Estado civil', _estadoCivil, estadosCiviles,
+              (v) => setState(() => _estadoCivil = v)),
+        ]),
+        _fila([
+          _campo('Ciudad', _ciudad),
+          _campo('Teléfono', _telefono),
+        ]),
+        _campo('Dirección', _direccion),
+        _campo('Ocupación', _ocupacion),
+        _fila([
+          _campo('Entidad (EPS)', _entidad),
+          _dropdown('Tipo de usuario', _tipoUsuario, tiposUsuario,
+              (v) => setState(() => _tipoUsuario = v)),
+        ]),
+      ]),
+      const SizedBox(height: 16),
+      _bloque('Valoración inicial', Icons.assignment_rounded, [
+        _campoMultilinea('Motivo de consulta', _motivo, 3),
+        _campoMultilinea('Antecedentes', _antecedentes, 3),
+        _campoMultilinea('Valoración inicial (narrativa)', _valoracion, 5),
+        _labelMini('Diagnóstico (DSM-5 / CIE-10)'),
+        _selectorDiagnostico(),
+        _campoMultilinea('Observaciones', _observaciones, 3),
+      ]),
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _guardando ? null : _guardar,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: PlatTheme.purple,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          child: _guardando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2.5))
+              : const Text('Guardar historia clínica',
+                  style:
+                      TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        ),
+      ),
+    ];
   }
 
   // ── Evolución ──────────────────────────────────────────────────────────────
