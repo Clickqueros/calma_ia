@@ -205,6 +205,31 @@ class PerfilAdminService {
     }
   }
 
+  /// Editar / reagendar una cita (fecha, hora, modalidad, estado).
+  Future<String?> actualizarCita(
+    String id, {
+    DateTime? fecha,
+    String? hora,
+    String? modalidad,
+    String? estado,
+  }) async {
+    if (_sb == null) return 'Backend no configurado.';
+    try {
+      final data = <String, dynamic>{};
+      if (fecha != null) {
+        data['fecha'] =
+            '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
+      }
+      if (hora != null) data['hora'] = hora;
+      if (modalidad != null) data['modalidad'] = modalidad;
+      if (estado != null) data['estado'] = estado;
+      await _sb!.from('appointments').update(data).eq('id', id);
+      return null;
+    } catch (e) {
+      return 'Error al actualizar la cita: $e';
+    }
+  }
+
   // ── Asignación paciente ↔ psicólogo ──────────────────────────────────────────
   Future<String?> asignar(String pacienteId, String? psicologoId) async {
     if (_sb == null) return 'Backend no configurado.';

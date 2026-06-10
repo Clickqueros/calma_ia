@@ -202,36 +202,126 @@ class _CitasAdminScreenState extends State<CitasAdminScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              onTap: () => _eliminar(c),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: const Color(0xFFFCA5A5)),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.delete_outline_rounded,
-                        size: 16, color: Color(0xFFDC2626)),
-                    SizedBox(width: 6),
-                    Text('Eliminar cita',
-                        style: TextStyle(
-                            color: Color(0xFFDC2626),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-            ),
+          Container(height: 1, color: const Color(0xFFF2F0FF)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _btn('Reagendar', Icons.edit_calendar_rounded,
+                  const Color(0xFF6B4EFF), () => _reagendar(c)),
+              const SizedBox(width: 8),
+              _btn('Cambiar estado', Icons.flag_rounded,
+                  const Color(0xFFD97706), () => _cambiarEstado(c)),
+              const Spacer(),
+              _btn('Eliminar', Icons.delete_outline_rounded,
+                  const Color(0xFFDC2626), () => _eliminar(c),
+                  outline: true),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  Widget _btn(String label, IconData icon, Color color, VoidCallback onTap,
+      {bool outline = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: outline ? Colors.transparent : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+              color: outline ? const Color(0xFFFCA5A5) : Colors.transparent),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Reagendar ────────────────────────────────────────────────────────────────
+  Future<void> _reagendar(CitaReal c) async {
+    final cambio = await showModalBottomSheet<({DateTime fecha, String hora, String modalidad})>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ReagendarSheet(cita: c),
+    );
+    if (cambio == null) return;
+    final err = await PerfilAdminService.instance.actualizarCita(
+      c.id,
+      fecha: cambio.fecha,
+      hora: cambio.hora,
+      modalidad: cambio.modalidad,
+    );
+    if (!mounted) return;
+    if (err == null) {
+      _cargar();
+      _toast('Cita reagendada ✓', ok: true);
+    } else {
+      _toast(err);
+    }
+  }
+
+  // ── Cambiar estado ───────────────────────────────────────────────────────────
+  Future<void> _cambiarEstado(CitaReal c) async {
+    const estados = ['agendada', 'confirmada', 'completada', 'cancelada'];
+    final nuevo = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 14),
+            const Text('Cambiar estado',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            ...estados.map((e) => ListTile(
+                  leading: Icon(Icons.circle, color: _color(e), size: 14),
+                  title: Text(_label(e)),
+                  trailing: c.estado == e
+                      ? const Icon(Icons.check_rounded,
+                          color: Color(0xFF059669))
+                      : null,
+                  onTap: () => Navigator.of(ctx).pop(e),
+                )),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+    if (nuevo == null) return;
+    final err =
+        await PerfilAdminService.instance.actualizarCita(c.id, estado: nuevo);
+    if (!mounted) return;
+    if (err == null) {
+      _cargar();
+      _toast('Estado actualizado ✓', ok: true);
+    } else {
+      _toast(err);
+    }
+  }
+
+  void _toast(String t, {bool ok = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(t),
+      backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   Widget _dato(IconData i, String t) => Row(
@@ -242,4 +332,224 @@ class _CitasAdminScreenState extends State<CitasAdminScreen> {
           Text(t, style: const TextStyle(color: PlatTheme.textGray, fontSize: 12.5)),
         ],
       );
+}
+
+// ── Sheet para reagendar ──────────────────────────────────────────────────────
+
+class _ReagendarSheet extends StatefulWidget {
+  final CitaReal cita;
+  const _ReagendarSheet({required this.cita});
+
+  @override
+  State<_ReagendarSheet> createState() => _ReagendarSheetState();
+}
+
+class _ReagendarSheetState extends State<_ReagendarSheet> {
+  late DateTime _fecha = widget.cita.fecha;
+  late String _hora = widget.cita.hora;
+  late String _modalidad = widget.cita.modalidad;
+
+  static const _horas = [
+    '8:00 AM', '9:30 AM', '11:00 AM', '2:00 PM', '4:30 PM', '6:00 PM'
+  ];
+  static const _meses = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul',
+    'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  static const _diasSem = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+  @override
+  Widget build(BuildContext context) {
+    final dias = List.generate(21, (i) => DateTime.now().add(Duration(days: i)))
+        .where((d) => d.weekday != DateTime.saturday && d.weekday != DateTime.sunday)
+        .toList();
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: const Color(0xFFE8E4FF),
+                  borderRadius: BorderRadius.circular(2))),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Reagendar cita',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              children: [
+                const Text('Nuevo día',
+                    style: TextStyle(
+                        color: PlatTheme.textGray,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: dias.length,
+                    itemBuilder: (ctx, i) {
+                      final d = dias[i];
+                      final sel = _fecha.year == d.year &&
+                          _fecha.month == d.month &&
+                          _fecha.day == d.day;
+                      return GestureDetector(
+                        onTap: () => setState(() => _fecha = d),
+                        child: Container(
+                          width: 62,
+                          margin: const EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(
+                            color: sel ? PlatTheme.purple : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: sel
+                                    ? PlatTheme.purple
+                                    : const Color(0xFFE8E4FF)),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(_diasSem[d.weekday],
+                                  style: TextStyle(
+                                      color: sel
+                                          ? Colors.white70
+                                          : PlatTheme.textGray,
+                                      fontSize: 11)),
+                              const SizedBox(height: 3),
+                              Text('${d.day}',
+                                  style: TextStyle(
+                                      color: sel
+                                          ? Colors.white
+                                          : PlatTheme.textDark,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold)),
+                              Text(_meses[d.month],
+                                  style: TextStyle(
+                                      color: sel
+                                          ? Colors.white70
+                                          : PlatTheme.textGray,
+                                      fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text('Nueva hora',
+                    style: TextStyle(
+                        color: PlatTheme.textGray,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: _horas.map((h) {
+                    final sel = _hora == h;
+                    return GestureDetector(
+                      onTap: () => setState(() => _hora = h),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 11),
+                        decoration: BoxDecoration(
+                          color: sel ? PlatTheme.purple : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: sel
+                                  ? PlatTheme.purple
+                                  : const Color(0xFFE8E4FF)),
+                        ),
+                        child: Text(h,
+                            style: TextStyle(
+                                color:
+                                    sel ? Colors.white : PlatTheme.textDark,
+                                fontSize: 13.5,
+                                fontWeight:
+                                    sel ? FontWeight.w700 : FontWeight.w500)),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 18),
+                const Text('Modalidad',
+                    style: TextStyle(
+                        color: PlatTheme.textGray,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _modChip('Videollamada', Icons.videocam_rounded),
+                    const SizedBox(width: 10),
+                    _modChip('Presencial', Icons.place_rounded),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(
+                        (fecha: _fecha, hora: _hora, modalidad: _modalidad)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PlatTheme.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Guardar cambios',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modChip(String valor, IconData icon) {
+    final sel = _modalidad == valor;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _modalidad = valor),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(
+            color: sel ? PlatTheme.purple.withValues(alpha: 0.1) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: sel ? PlatTheme.purple : const Color(0xFFE8E4FF),
+                width: sel ? 1.5 : 1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  color: sel ? PlatTheme.purple : PlatTheme.textGray, size: 18),
+              const SizedBox(width: 7),
+              Text(valor,
+                  style: TextStyle(
+                      color: sel ? PlatTheme.purple : PlatTheme.textGray,
+                      fontSize: 13,
+                      fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
