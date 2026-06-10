@@ -83,7 +83,7 @@ class PerfilAdminService {
     }
   }
 
-  // ── Crear psicólogo (con datos básicos + tarjeta) ────────────────────────────
+  // ── Crear psicólogo (vía Edge Function: robusto y seguro) ────────────────────
   Future<String?> crearPsicologo({
     required String nombre,
     required String email,
@@ -97,37 +97,16 @@ class PerfilAdminService {
     if (password.length < 6) {
       return 'La contraseña debe tener al menos 6 caracteres.';
     }
-    SupabaseClient? temp;
-    try {
-      temp = SupabaseClient(
-          SupabaseConfig.supabaseUrl, SupabaseConfig.supabaseAnonKey);
-      final res = await temp.auth.signUp(
-        email: email.trim(),
-        password: password,
-        data: {'nombre': nombre.trim(), 'rol': 'psychologist'},
-      );
-      final uid = res.user?.id;
-      if (uid == null) {
-        return 'No se pudo crear. ¿La confirmación de correo está activa? '
-            'Desactívala en Supabase para crear cuentas al instante.';
-      }
-      // Completar datos básicos en el perfil (con la sesión del admin)
-      await _sb!.from('profiles').update({
-        'telefono': telefono.trim(),
-        'documento': documento.trim(),
-        'registro_profesional': registroProfesional.trim(),
-        'tarjeta_url': tarjetaUrl,
-      }).eq('id', uid);
-      return null;
-    } catch (e) {
-      final msg = e.toString();
-      if (msg.contains('already registered') || msg.contains('User already')) {
-        return 'Ya existe una cuenta con ese correo.';
-      }
-      return 'Error al crear psicólogo: $e';
-    } finally {
-      await temp?.dispose();
-    }
+    return _invocarAdmin({
+      'accion': 'crear',
+      'email': email.trim(),
+      'password': password,
+      'nombre': nombre.trim(),
+      'telefono': telefono.trim(),
+      'documento': documento.trim(),
+      'registro_profesional': registroProfesional.trim(),
+      'tarjeta_url': tarjetaUrl,
+    });
   }
 
   // ── Editar datos básicos (no email/contraseña) ───────────────────────────────
