@@ -271,7 +271,7 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
                   style: TextStyle(
                       color: sensible
                           ? const Color(0xFFFBBF24)
-                          : const Color.fromRGBO(176, 191, 255, 0.5),
+                          : const Color.fromRGBO(255, 255, 255, 0.6),
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.1)),
@@ -314,7 +314,7 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
             Icon(it.icon,
                 color: selected
                     ? accent
-                    : const Color.fromRGBO(176, 191, 255, 0.55),
+                    : const Color.fromRGBO(255, 255, 255, 0.75),
                 size: 19),
             const SizedBox(width: 12),
             Expanded(
@@ -322,7 +322,7 @@ class _SuperAdminShellState extends State<SuperAdminShell> {
                   style: TextStyle(
                       color: selected
                           ? Colors.white
-                          : const Color.fromRGBO(176, 191, 255, 0.65),
+                          : const Color.fromRGBO(255, 255, 255, 0.92),
                       fontSize: 13.5,
                       fontWeight:
                           selected ? FontWeight.w600 : FontWeight.w400)),

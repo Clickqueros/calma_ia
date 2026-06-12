@@ -246,12 +246,12 @@ class _AdminShellState extends State<AdminShell> {
                 child: Row(
                   children: [
                     Icon(Icons.logout_rounded,
-                        color: const Color.fromRGBO(176, 191, 255, 0.55),
+                        color: const Color.fromRGBO(255, 255, 255, 0.75),
                         size: 20),
                     const SizedBox(width: 12),
                     Text('Salir del panel',
                         style: TextStyle(
-                            color: const Color.fromRGBO(176, 191, 255, 0.65),
+                            color: const Color.fromRGBO(255, 255, 255, 0.92),
                             fontSize: 14)),
                   ],
                 ),
@@ -267,7 +267,7 @@ class _AdminShellState extends State<AdminShell> {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Text(text,
             style: const TextStyle(
-                color: Color.fromRGBO(176, 191, 255, 0.5),
+                color: Color.fromRGBO(255, 255, 255, 0.6),
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.4)),
@@ -297,14 +297,14 @@ class _AdminShellState extends State<AdminShell> {
             Icon(icon,
                 color: selected
                     ? PlatTheme.softPurple
-                    : const Color.fromRGBO(176, 191, 255, 0.55),
+                    : const Color.fromRGBO(255, 255, 255, 0.75),
                 size: 20),
             const SizedBox(width: 12),
             Text(label,
                 style: TextStyle(
                     color: selected
                         ? Colors.white
-                        : const Color.fromRGBO(176, 191, 255, 0.65),
+                        : const Color.fromRGBO(255, 255, 255, 0.92),
                     fontSize: 14,
                     fontWeight:
                         selected ? FontWeight.w600 : FontWeight.w400)),
@@ -405,14 +405,14 @@ class _AdminShellState extends State<AdminShell> {
                       Icon(e.value.$1,
                           color: selected
                               ? PlatTheme.softPurple
-                              : const Color.fromRGBO(176, 191, 255, 0.5),
+                              : const Color.fromRGBO(255, 255, 255, 0.6),
                           size: 22),
                       const SizedBox(height: 4),
                       Text(e.value.$2,
                           style: TextStyle(
                               color: selected
                                   ? PlatTheme.softPurple
-                                  : const Color.fromRGBO(176, 191, 255, 0.5),
+                                  : const Color.fromRGBO(255, 255, 255, 0.6),
                               fontSize: 10,
                               fontWeight: selected
                                   ? FontWeight.w700

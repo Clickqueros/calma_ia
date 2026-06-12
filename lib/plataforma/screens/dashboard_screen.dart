@@ -207,7 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         e.value.$1,
                         color: selected
                             ? PlatTheme.softPurple
-                            : Color.fromRGBO(176, 191, 255, 0.5),
+                            : Color.fromRGBO(255, 255, 255, 0.6),
                         size: 22,
                       ),
                       const SizedBox(height: 4),
@@ -216,7 +216,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: TextStyle(
                           color: selected
                               ? PlatTheme.softPurple
-                              : Color.fromRGBO(176, 191, 255, 0.5),
+                              : Color.fromRGBO(255, 255, 255, 0.6),
                           fontSize: 10,
                           fontWeight: selected
                               ? FontWeight.w700
@@ -359,7 +359,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Text(
         text,
         style: TextStyle(
-          color: Color.fromRGBO(176, 191, 255, 0.5),
+          color: Color.fromRGBO(255, 255, 255, 0.6),
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.4,
@@ -393,7 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon,
               color: selected
                   ? PlatTheme.softPurple
-                  : Color.fromRGBO(176, 191, 255, 0.55),
+                  : Color.fromRGBO(255, 255, 255, 0.75),
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -402,7 +402,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(
                 color: selected
                     ? Colors.white
-                    : Color.fromRGBO(176, 191, 255, 0.65),
+                    : Color.fromRGBO(255, 255, 255, 0.92),
                 fontSize: 14,
                 fontWeight:
                     selected ? FontWeight.w600 : FontWeight.w400,

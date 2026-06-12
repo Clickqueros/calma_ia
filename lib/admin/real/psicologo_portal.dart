@@ -374,7 +374,7 @@ class _PsicologoShellState extends State<PsicologoShell> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    color: Color.fromRGBO(176, 191, 255, 0.5), fontSize: 11)),
+                    color: Color.fromRGBO(255, 255, 255, 0.6), fontSize: 11)),
           ),
           GestureDetector(
             onTap: () async {
@@ -542,14 +542,14 @@ class _PsicologoShellState extends State<PsicologoShell> {
             Icon(icon,
                 color: sel
                     ? PlatTheme.softPurple
-                    : const Color.fromRGBO(176, 191, 255, 0.55),
+                    : const Color.fromRGBO(255, 255, 255, 0.75),
                 size: 20),
             const SizedBox(width: 12),
             Text(label,
                 style: TextStyle(
                     color: sel
                         ? Colors.white
-                        : const Color.fromRGBO(176, 191, 255, 0.65),
+                        : const Color.fromRGBO(255, 255, 255, 0.92),
                     fontSize: 14,
                     fontWeight: sel ? FontWeight.w600 : FontWeight.w400)),
           ],
@@ -589,14 +589,14 @@ class _PsicologoShellState extends State<PsicologoShell> {
                       Icon(e.value.$1,
                           color: sel
                               ? PlatTheme.softPurple
-                              : const Color.fromRGBO(176, 191, 255, 0.5),
+                              : const Color.fromRGBO(255, 255, 255, 0.6),
                           size: 22),
                       const SizedBox(height: 4),
                       Text(e.value.$2,
                           style: TextStyle(
                               color: sel
                                   ? PlatTheme.softPurple
-                                  : const Color.fromRGBO(176, 191, 255, 0.5),
+                                  : const Color.fromRGBO(255, 255, 255, 0.6),
                               fontSize: 10,
                               fontWeight:
                                   sel ? FontWeight.w700 : FontWeight.w400)),
