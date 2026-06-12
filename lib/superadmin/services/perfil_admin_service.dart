@@ -16,6 +16,10 @@ class PerfilAdmin {
   final String tarjetaUrl;
   final bool activo;
   final String creadoEn;
+  final String enfoque;
+  final String areas;
+  final int precio;
+  final String bio;
 
   const PerfilAdmin({
     required this.id,
@@ -29,6 +33,10 @@ class PerfilAdmin {
     this.tarjetaUrl = '',
     this.activo = true,
     this.creadoEn = '',
+    this.enfoque = '',
+    this.areas = '',
+    this.precio = 0,
+    this.bio = '',
   });
 }
 
@@ -45,7 +53,7 @@ class PerfilAdminService {
     if (_sb == null) return [];
     try {
       final rows = await _sb!.from('profiles').select(
-          'id, nombre, email, rol, psicologo_id, telefono, documento, registro_profesional, tarjeta_url, activo, creado_en');
+          'id, nombre, email, rol, psicologo_id, telefono, documento, registro_profesional, tarjeta_url, activo, creado_en, enfoque, areas, precio, bio');
       return (rows as List)
           .map((r) => PerfilAdmin(
                 id: r['id'].toString(),
@@ -61,6 +69,10 @@ class PerfilAdminService {
                 tarjetaUrl: r['tarjeta_url'] ?? '',
                 activo: r['activo'] ?? true,
                 creadoEn: r['creado_en']?.toString() ?? '',
+                enfoque: r['enfoque'] ?? '',
+                areas: r['areas'] ?? '',
+                precio: (r['precio'] as int?) ?? 0,
+                bio: r['bio'] ?? '',
               ))
           .toList();
     } catch (_) {
@@ -96,12 +108,16 @@ class PerfilAdminService {
     String documento = '',
     String registroProfesional = '',
     String tarjetaUrl = '',
+    String enfoque = '',
+    String areas = '',
+    int precio = 0,
+    String bio = '',
   }) async {
     if (!SupabaseConfig.isConfigured) return 'Backend no configurado.';
     if (password.length < 6) {
       return 'La contraseña debe tener al menos 6 caracteres.';
     }
-    return _invocarAdmin({
+    final err = await _invocarAdmin({
       'accion': 'crear',
       'email': email.trim(),
       'password': password,
@@ -111,9 +127,27 @@ class PerfilAdminService {
       'registro_profesional': registroProfesional.trim(),
       'tarjeta_url': tarjetaUrl,
     });
+    if (err != null) return err;
+    // Completar los datos de "match" en el perfil recién creado.
+    try {
+      final row = await _sb!
+          .from('profiles')
+          .select('id')
+          .eq('email', email.trim())
+          .maybeSingle();
+      if (row != null) {
+        await _sb!.from('profiles').update({
+          'enfoque': enfoque.trim(),
+          'areas': areas.trim(),
+          'precio': precio,
+          'bio': bio.trim(),
+        }).eq('id', row['id']);
+      }
+    } catch (_) {}
+    return null;
   }
 
-  // ── Editar datos básicos (no email/contraseña) ───────────────────────────────
+  // ── Editar datos (incluye campos de match) ───────────────────────────────────
   Future<String?> actualizarDatos(
     String userId, {
     required String nombre,
@@ -121,6 +155,10 @@ class PerfilAdminService {
     String documento = '',
     String registroProfesional = '',
     String? tarjetaUrl,
+    String? enfoque,
+    String? areas,
+    int? precio,
+    String? bio,
   }) async {
     if (_sb == null) return 'Backend no configurado.';
     try {
@@ -131,6 +169,10 @@ class PerfilAdminService {
         'registro_profesional': registroProfesional.trim(),
       };
       if (tarjetaUrl != null) data['tarjeta_url'] = tarjetaUrl;
+      if (enfoque != null) data['enfoque'] = enfoque.trim();
+      if (areas != null) data['areas'] = areas.trim();
+      if (precio != null) data['precio'] = precio;
+      if (bio != null) data['bio'] = bio.trim();
       await _sb!.from('profiles').update(data).eq('id', userId);
       return null;
     } catch (e) {

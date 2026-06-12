@@ -3,6 +3,7 @@ import '../../theme/plat_theme.dart';
 import '../../../core/auth/perfil_service.dart';
 import '../../../core/citas/citas_service.dart';
 import 'agendar_cita_real_screen.dart';
+import '../match/encontrar_psicologo_screen.dart';
 
 /// Sección "Citas" del paciente, con datos reales:
 /// su psicólogo asignado + sus citas + agendar nueva.
@@ -104,21 +105,58 @@ class _MisCitasPacienteScreenState extends State<MisCitasPacienteScreen> {
   Widget _psicologoCard() {
     if (_psicologo == null) {
       return Container(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF7ED),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFFCD9A8)),
+          gradient: const LinearGradient(
+            colors: [PlatTheme.darkNavy, Color(0xFF2D1B69)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
         ),
-        child: const Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.info_outline_rounded, color: Color(0xFFD97706)),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                  'Aún no tienes un psicólogo asignado. Conéctate con uno desde tu diario o pídelo a tu administrador.',
-                  style: TextStyle(
-                      color: Color(0xFF92400E), fontSize: 13, height: 1.4)),
+            const Row(
+              children: [
+                Icon(Icons.favorite_rounded,
+                    color: Color(0xFFFBBF24), size: 22),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text('Encuentra a tu psicólogo ideal',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+                'Responde 3 preguntas y te recomendamos al profesional que mejor encaja contigo.',
+                style: TextStyle(color: PlatTheme.softBlue, fontSize: 13, height: 1.4)),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const EncontrarPsicologoScreen()));
+                  _cargar();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: PlatTheme.purple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                label: const Text('Encontrar mi psicólogo',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
             ),
           ],
         ),

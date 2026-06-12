@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../plataforma/theme/plat_theme.dart';
 import '../../core/supabase/supabase_config.dart';
 import '../../core/clinica/archivo_picker.dart';
+import '../../core/match/match_catalogos.dart';
 import '../services/perfil_admin_service.dart';
 import '../widgets/status_badge.dart';
 
@@ -378,6 +379,18 @@ class _FormPsicologoState extends State<_FormPsicologo> {
       TextEditingController(text: widget.existente?.documento ?? '');
   late final _registro = TextEditingController(
       text: widget.existente?.registroProfesional ?? '');
+  late final _precio = TextEditingController(
+      text: (widget.existente?.precio ?? 0) > 0
+          ? '${widget.existente!.precio}'
+          : '');
+  late final _bio =
+      TextEditingController(text: widget.existente?.bio ?? '');
+  late String _enfoque = widget.existente?.enfoque ?? '';
+  late final Set<String> _areas = ((widget.existente?.areas ?? '')
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty))
+      .toSet();
 
   String _tarjetaUrl = '';
   String _tarjetaNombre = '';
@@ -396,7 +409,10 @@ class _FormPsicologoState extends State<_FormPsicologo> {
 
   @override
   void dispose() {
-    for (final c in [_nombre, _email, _password, _telefono, _documento, _registro]) {
+    for (final c in [
+      _nombre, _email, _password, _telefono, _documento, _registro,
+      _precio, _bio
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -418,6 +434,8 @@ class _FormPsicologoState extends State<_FormPsicologo> {
   Future<void> _guardar() async {
     setState(() { _guardando = true; _error = null; });
     String? err;
+    final areasStr = _areas.join(', ');
+    final precioNum = int.tryParse(_precio.text.trim()) ?? 0;
     if (_esEdicion) {
       err = await PerfilAdminService.instance.actualizarDatos(
         widget.existente!.id,
@@ -426,6 +444,10 @@ class _FormPsicologoState extends State<_FormPsicologo> {
         documento: _documento.text,
         registroProfesional: _registro.text,
         tarjetaUrl: _tarjetaUrl,
+        enfoque: _enfoque,
+        areas: areasStr,
+        precio: precioNum,
+        bio: _bio.text,
       );
     } else {
       err = await PerfilAdminService.instance.crearPsicologo(
@@ -436,6 +458,10 @@ class _FormPsicologoState extends State<_FormPsicologo> {
         documento: _documento.text,
         registroProfesional: _registro.text,
         tarjetaUrl: _tarjetaUrl,
+        enfoque: _enfoque,
+        areas: areasStr,
+        precio: precioNum,
+        bio: _bio.text,
       );
     }
     if (!mounted) return;
@@ -497,6 +523,112 @@ class _FormPsicologoState extends State<_FormPsicologo> {
                         style: const TextStyle(
                             color: PlatTheme.textGray, fontSize: 12.5)),
                   ),
+                // ── Datos para el match ──────────────────────────────────
+                const SizedBox(height: 4),
+                const Text('PERFIL PARA EL MATCH',
+                    style: TextStyle(
+                        color: PlatTheme.purple,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8)),
+                const SizedBox(height: 12),
+                const Text('Enfoque',
+                    style: TextStyle(
+                        color: PlatTheme.textGray,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                      color: PlatTheme.softBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE8E4FF))),
+                  child: DropdownButton<String>(
+                    value: _enfoque.isEmpty ? null : _enfoque,
+                    hint: const Text('Seleccionar',
+                        style:
+                            TextStyle(color: PlatTheme.textGray, fontSize: 13.5)),
+                    isExpanded: true,
+                    underline: const SizedBox.shrink(),
+                    items: enfoquesTerapeuticos
+                        .map((e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e,
+                                style: const TextStyle(fontSize: 13.5))))
+                        .toList(),
+                    onChanged: (v) => setState(() => _enfoque = v ?? ''),
+                  ),
+                ),
+                const Text('Áreas que trata',
+                    style: TextStyle(
+                        color: PlatTheme.textGray,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: areasConsulta.map((a) {
+                    final sel = _areas.contains(a);
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        if (sel) {
+                          _areas.remove(a);
+                        } else {
+                          _areas.add(a);
+                        }
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: sel ? PlatTheme.purple : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                              color: sel
+                                  ? PlatTheme.purple
+                                  : const Color(0xFFE8E4FF)),
+                        ),
+                        child: Text(a,
+                            style: TextStyle(
+                                color:
+                                    sel ? Colors.white : PlatTheme.textDark,
+                                fontSize: 12.5,
+                                fontWeight:
+                                    sel ? FontWeight.w700 : FontWeight.w500)),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                _campo('Precio por sesión (\$)', _precio),
+                const Text('Bio / presentación',
+                    style: TextStyle(
+                        color: PlatTheme.textGray,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  child: TextField(
+                    controller: _bio,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Breve presentación profesional...',
+                      isDense: true,
+                      filled: true,
+                      fillColor: PlatTheme.softBg,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE8E4FF))),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE8E4FF))),
+                    ),
+                  ),
+                ),
                 const Text('Tarjeta profesional',
                     style: TextStyle(
                         color: PlatTheme.textGray,
