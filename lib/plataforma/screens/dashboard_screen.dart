@@ -9,6 +9,7 @@ import 'citas/mis_citas_paciente_screen.dart';
 import '../../core/supabase/supabase_config.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/auth/perfil_service.dart';
+import 'animo/animo_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -457,6 +458,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildEncabezado(),
+          const SizedBox(height: 24),
+          const AnimoCard(),
           const SizedBox(height: 32),
           _buildStatCards(),
           const SizedBox(height: 32),
