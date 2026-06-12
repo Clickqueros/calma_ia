@@ -7,6 +7,7 @@ import '../../core/auth/perfil_service.dart';
 import '../../core/citas/citas_service.dart';
 import '../../core/clinica/archivo_picker.dart';
 import '../../plataforma/screens/diario/models/nota_model.dart';
+import '../../plataforma/screens/animo/animo_reporte_widget.dart';
 import 'historia_clinica_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1262,6 +1263,8 @@ class _DiarioPacienteScreenState extends State<_DiarioPacienteScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                AnimoReporteSemanal(pacienteId: widget.paciente.id),
                 const SizedBox(height: 16),
                 _reporteSemanalCard(calcularReporteSemanal(_notas)),
                 const SizedBox(height: 18),

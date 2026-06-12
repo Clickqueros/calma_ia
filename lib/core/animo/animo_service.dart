@@ -8,6 +8,57 @@ class RegistroAnimo {
   const RegistroAnimo(this.fecha, this.nivel);
 }
 
+// ── Reporte semanal de ánimo ──────────────────────────────────────────────────
+
+class DiaAnimo {
+  final DateTime fecha;
+  final int? nivel; // null si no calificó ese día
+  const DiaAnimo(this.fecha, this.nivel);
+}
+
+class ReporteAnimo {
+  final List<DiaAnimo> dias; // últimos 7 días (orden ascendente)
+  final double? promedio; // 0-10
+  final int registros;
+  const ReporteAnimo(
+      {required this.dias, required this.promedio, required this.registros});
+
+  String get etiqueta {
+    if (promedio == null) return 'Sin datos';
+    if (promedio! >= 7) return 'Buena semana';
+    if (promedio! >= 4) return 'Altibajos';
+    return 'Semana difícil';
+  }
+}
+
+/// Calcula el reporte de los últimos 7 días a partir de los registros.
+ReporteAnimo calcularReporteAnimo(List<RegistroAnimo> registros) {
+  final ahora = DateTime.now();
+  final inicio = DateTime(ahora.year, ahora.month, ahora.day)
+      .subtract(const Duration(days: 6));
+
+  bool mismoDia(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  final dias = <DiaAnimo>[];
+  final niveles = <int>[];
+  for (var i = 0; i < 7; i++) {
+    final dia = inicio.add(Duration(days: i));
+    final reg = registros.where((r) => mismoDia(r.fecha, dia)).toList();
+    if (reg.isEmpty) {
+      dias.add(DiaAnimo(dia, null));
+    } else {
+      dias.add(DiaAnimo(dia, reg.first.nivel));
+      niveles.add(reg.first.nivel);
+    }
+  }
+  final promedio = niveles.isEmpty
+      ? null
+      : niveles.reduce((a, b) => a + b) / niveles.length;
+  return ReporteAnimo(
+      dias: dias, promedio: promedio, registros: niveles.length);
+}
+
 /// Termómetro de ánimo: el paciente califica su día de 0 a 10.
 class AnimoService {
   AnimoService._();
