@@ -11,6 +11,7 @@ import '../../core/auth/auth_service.dart';
 import '../../core/auth/perfil_service.dart';
 import 'animo/animo_card.dart';
 import 'animo/animo_reporte_widget.dart';
+import 'citas/agendar_cita_real_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -467,7 +468,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
             AnimoReporteSemanal(
                 pacienteId: AuthService.instance.usuarioActual!.id),
           ],
+          const SizedBox(height: 24),
+          _buildAccesos(),
         ],
+      ),
+    );
+  }
+
+  // ── Accesos rápidos ─────────────────────────────────────────────────────────
+  Widget _buildAccesos() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Accesos rápidos',
+            style: TextStyle(
+                color: PlatTheme.textDark,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _accesoCard(
+                icon: Icons.event_available_rounded,
+                titulo: 'Agendar cita',
+                subtitulo: 'Con tu psicólogo',
+                colores: const [PlatTheme.purple, PlatTheme.softPurple],
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const AgendarCitaRealScreen())),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _accesoCard(
+                icon: Icons.edit_note_rounded,
+                titulo: 'Escribir en mi diario',
+                subtitulo: 'Registra cómo te sientes',
+                colores: const [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                onTap: () => setState(() => _selectedNav = 4),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _accesoCard({
+    required IconData icon,
+    required String titulo,
+    required String subtitulo,
+    required List<Color> colores,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFEFECFF)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: colores,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(height: 14),
+            Text(titulo,
+                style: const TextStyle(
+                    color: PlatTheme.textDark,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(subtitulo,
+                style: const TextStyle(
+                    color: PlatTheme.textGray, fontSize: 12.5)),
+          ],
+        ),
       ),
     );
   }
